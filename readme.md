@@ -1,49 +1,50 @@
 # 🛰 MediaSoup Concept Project
 
-This is a Dockerized MediaSoup server project. The container is based on Ubuntu and includes everything needed: Fortify, Node.js, and all project dependencies.
+Alright, here’s the gist of this Dockerized MediaSoup server setup — running on Ubuntu, with wathify, Node.js, and all the usual suspects baked right in.
 
-## 🛠 Requirements
+## 🛠 what we Need
 
-- Docker
+- Docker  
 - Docker Compose
 
-## 🚀 Getting Started
+## 🚀 How to Get Started (Note to Self)
 
-### 1. Clone the Repository
+### 1. Clone the Repo(blah blah blah...)
 
 ```bash
 git clone https://github.com/prik73/mediasoup-concept-2.git
 cd mediasoup-concept-2
-```
+2. Build the Docker Image (Dockerfile stuff) (google - how to run dockerfile)
+This Dockerfile spins up an Ubuntu base, installs everything that is written in Dockerfile
 
-### 2. Start the Container
 
-```bash
+2.1 docker-compose up --build
+
+3. Fire Up the Container (docker-compose)
+
 docker-compose up -d --build
-```
 
-This builds the image and starts the container. Necessary ports are exposed (`3000`, `2000–2020`, `10000–10100`).
 
-### 3. Access the Container
+4. Jump Inside the Container
+Two ways to get a terminal inside:
 
-You can either:
+VS Code: with Docker extension, right-click the container (mediasoup-server), click Attach Shell
 
-- Use VS Code (with the Docker extension) → right-click the container → Attach Shell  
-- Or use CLI:
+Or CLI:
 
-```bash
+
 docker exec -it mediasoup-server bash
-```
+5. Run the Server
+Once inside, just do:
 
-### 4. Run the Server
+cd test-mediasoup
 
-Inside the container shell:
-
-```bash
 npm start
-```
+And boom, the MediaSoup server is up and running on port 3000
 
-## 🔁 Restart Policy
+🔁 About the Restart Policy (Yeah, this annoyed me)
+The container uses restart: always in the docker-compose.yml.
 
-The container uses `restart: always` in `docker-compose.yml`.  
-You may turn it off if it annoys you (I may turn it off — note to self).
+Honestly, sometimes it just keeps restarting and bugs me. You can totally turn it off if you want — just tweak the compose file or run this:
+
+docker update --restart=no mediasoup-server

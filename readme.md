@@ -2,31 +2,23 @@
 
 this is a basic but deep implementation of mediasoup. it utilizes **node.js**, **docker**, and **mediasoup** to establish a media server featuring hot-reloading capability through `watchify`.
 
----
+
 
 ## what this project uses
 
 it uses docker to create an ubuntu image, and inside it, our project will run. the project uses mediasoup (using node.js, obviously), docker-compose for making the container.
 
----
 
-## 📁 file structure
 
-.
-├── dockerfile # instructions to build the docker image
-├── docker-compose.yml # docker compose config to run the container
-└── src/ # your application code
-    ├── package.json
-    ├── index.js
-    └── ...
 
----
 
 ## requirements to run
 
--> a working laptop running linux or wsl (mac will be fine too, i dunno). docker, dockercompose, and just this. and internet.
+-> a working laptop running linux or wsl (mac will be fine too, i dunno). 
+->docker,
+->dockercompose, and just this.
+->and internet (to clone this repo).
 
----
 
 ## how to run
 

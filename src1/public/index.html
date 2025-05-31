@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Minimal MediaSoup UI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, sans-serif;
+    }
+
+    body { 
+      margin: 0;
+      padding: 2rem;
+      background-color: #fff;
+      color: #111;
+    }
+
+    .video-section {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+
+    video {
+      width: 360px;
+      background: #000;
+      border-radius: 6px;
+       object-fit: cover;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    button {
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      border: 1px solid #ccc;
+      background: #f8f8f8;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #eaeaea;
+    }
+    .pill-button {
+  padding: 6px 16px;
+  border-radius: 999px;
+  background-color: #eee;
+  border: 1px solid #ccc;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.pill-button:hover {
+  background-color: #ddd;
+}
+  </style>
+</head>
+<body>
+
+  <div class="video-section">
+    <div>
+      <h3>Local Video</h3>
+      <video id="localVideo" autoplay muted></video>
+    </div>
+    <div>
+      <h3>Remote Video</h3>
+      <video id="remoteVideo" autoplay></video>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="btnLocalVideo">1. Get Local Video</button>
+    <button id="btnStopVideo" class="pill-button">Stop</button>
+
+    <div class="button-group">
+      <button id="btnRtpCapabilities">2. Get Rtp Capabilities</button>
+      <button id="btnDevice">3. Create Device</button>
+      <button id="btnCreateSendTransport">4. Create Send Transport</button>
+      <button id="btnConnectSendTransport">5. Connect Send Transport & Produce</button>
+      <button id="btnRecvSendTransport">6. Create Recv Transport</button>
+      <button id="btnConnectRecvTransport">7. Connect Recv Transport & Consume</button>
+    </div>
+  </div>
+
+  <script src="bundle.js"></script>
+</body>
+</html>

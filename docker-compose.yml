@@ -2,8 +2,7 @@ version: "3"
 services:
   linux:
     container_name: "ubuntu-linux-media2"
-    image: "media-soup-server"
-    restart: "always"
+    build: .
     tty: true
     ports: 
       - "3000:3000"

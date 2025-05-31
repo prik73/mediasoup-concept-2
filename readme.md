@@ -34,7 +34,7 @@ after running
 
 your mediasoup server should be accessible on:
 
-http://localhost:3000
+http://localhost:3000/sfu
 
 ports 2000–2020 are also exposed for media transport.
 

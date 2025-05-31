@@ -28,7 +28,7 @@ this command will:
 - build the image
 - mount the `src/` folder
 
----
+
 
 after running
 
@@ -38,7 +38,6 @@ http://localhost:3000
 
 ports 2000–2020 are also exposed for media transport.
 
----
 
 if you modify code and need to rebuild the container, run:
 ```bash

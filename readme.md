@@ -1,50 +1,62 @@
-# 🛰 MediaSoup Concept Project
+# mediasoup docker project
 
-Alright, here’s the gist of this Dockerized MediaSoup server setup — running on Ubuntu, with wathify, Node.js, and all the usual suspects baked right in.
+this is a basic but deep implementation of mediasoup. it utilizes **node.js**, **docker**, and **mediasoup** to establish a media server featuring hot-reloading capability through `watchify`.
 
-## 🛠 what we Need
+---
 
-- Docker  
-- Docker Compose
+## what this project uses
 
-## 🚀 How to Get Started (Note to Self)
+it uses docker to create an ubuntu image, and inside it, our project will run. the project uses mediasoup (using node.js, obviously), docker-compose for making the container.
 
-### 1. Clone the Repo(blah blah blah...)
+---
 
+## 📁 file structure
+
+.
+├── dockerfile # instructions to build the docker image
+├── docker-compose.yml # docker compose config to run the container
+└── src/ # your application code
+    ├── package.json
+    ├── index.js
+    └── ...
+
+---
+
+## requirements to run
+
+-> a working laptop running linux or wsl (mac will be fine too, i dunno). docker, dockercompose, and just this. and internet.
+
+---
+
+## how to run
+
+clone the repo, go into the folder, and run "docker-compose up --build"
+
+this command will:
+- build the image
+- mount the `src/` folder
+
+---
+
+after running
+
+your mediasoup server should be accessible on:
+
+http://localhost:3000
+
+ports 2000–2020 are also exposed for media transport.
+
+---
+
+if you modify code and need to rebuild the container, run:
 ```bash
-git clone https://github.com/prik73/mediasoup-concept-2.git
-cd mediasoup-concept-2
-2. Build the Docker Image (Dockerfile stuff) (google - how to run dockerfile)
-This Dockerfile spins up an Ubuntu base, installs everything that is written in Dockerfile
+docker-compose up --build
+```
 
+if you wish to create a new container instance, adjust the `container_name` in your `docker-compose.yml` file.
 
-2.1 docker-compose up --build
+---
 
-3. Fire Up the Container (docker-compose)
+-done!
 
-docker-compose up -d --build
-
-
-4. Jump Inside the Container
-Two ways to get a terminal inside:
-
-VS Code: with Docker extension, right-click the container (mediasoup-server), click Attach Shell
-
-Or CLI:
-
-
-docker exec -it mediasoup-server bash
-5. Run the Server
-Once inside, just do:
-
-cd test-mediasoup
-
-npm start
-And boom, the MediaSoup server is up and running on port 3000
-
-🔁 About the Restart Policy (Yeah, this annoyed me)
-The container uses restart: always in the docker-compose.yml.
-
-Honestly, sometimes it just keeps restarting and bugs me. You can totally turn it off if you want — just tweak the compose file or run this:
-
-docker update --restart=no mediasoup-server
+we are now set to work on or experiment with the project within the docker environment.

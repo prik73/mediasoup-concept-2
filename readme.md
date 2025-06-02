@@ -27,6 +27,7 @@ clone the repo, go into the folder, and run "docker-compose up --build"
 this command will:
 - build the image
 - mount the `src/` folder
+-- or src2/ (manualy change in the Dockerfile), to use more abstract version
 
 
 

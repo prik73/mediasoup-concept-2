@@ -21,7 +21,7 @@
       max-width: 1400px;
       margin: 0 auto;
       display: grid;
-      grid-template-columns: 1fr 350px;
+      grid-template-columns: 1fr 400px;
       gap: 25px;
       height: calc(100vh - 40px);
     }
@@ -138,12 +138,20 @@
 
     .step {
       margin-bottom: 15px;
-      padding: 16px;
       background: #f7fafc;
       border-radius: 10px;
       border-left: 4px solid #e2e8f0;
       transition: all 0.3s ease;
       position: relative;
+      overflow: hidden;
+    }
+
+    .step-header {
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
     .step.active {
@@ -158,9 +166,6 @@
     }
 
     .step-number {
-      position: absolute;
-      top: -8px;
-      left: -8px;
       width: 24px;
       height: 24px;
       background: #e2e8f0;
@@ -172,6 +177,7 @@
       font-weight: bold;
       color: #4a5568;
       transition: all 0.3s ease;
+      flex-shrink: 0;
     }
 
     .step.active .step-number {
@@ -184,42 +190,101 @@
       color: white;
     }
 
+    .step-title {
+      flex: 1;
+    }
+
     .step h4 {
-      margin-bottom: 8px;
+      margin-bottom: 4px;
       color: #2d3748;
       font-size: 1rem;
       font-weight: 600;
     }
 
-    .step p {
+    .step-summary {
       color: #718096;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .expand-icon {
+      font-size: 12px;
+      color: #a0aec0;
+      transition: transform 0.3s ease;
+    }
+
+    .step.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    .step-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 12px;
+    }
+
+    .step.expanded .step-details {
+      max-height: 300px;
+    }
+
+    .step-content {
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .step-content h5 {
+      color: #2d3748;
       font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .step-content p {
+      color: #4a5568;
+      font-size: 13px;
       line-height: 1.5;
-      margin: 0;
+      margin-bottom: 12px;
     }
 
-    .status-indicator {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #e2e8f0;
-      margin-right: 8px;
-      transition: background-color 0.3s ease;
+    .step-content ul {
+      margin-left: 16px;
+      margin-bottom: 12px;
     }
 
-    .step.active .status-indicator {
-      background: #4299e1;
-      animation: pulse 2s infinite;
+    .step-content li {
+      color: #4a5568;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 4px;
     }
 
-    .step.completed .status-indicator {
-      background: #48bb78;
+    .code-snippet {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      margin: 8px 0;
+      overflow-x: auto;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
+    .external-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #4299e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    .external-link:hover {
+      color: #3182ce;
+      text-decoration: underline;
     }
 
     .info-box {
@@ -298,7 +363,7 @@
 
       <div class="controls">
         <button id="btnLocalVideo">Start Publishing</button>
-        <button id="btnStopVideo">Stop Stream</button>
+        <button id="btnStopVideo">Stop</button>
         <button id="btnRecvSendTransport">Start Consuming</button>
       </div>
     </div>
@@ -307,44 +372,152 @@
       <h2>How It Works</h2>
       
       <div class="step active" id="step1">
-        <div class="step-number">1</div>
-        <h4>Connect to Server</h4>
-        <p>WebSocket connection established with MediaSoup SFU server. Ready to start streaming.</p>
+        <div class="step-header" onclick="toggleStep('step1')">
+          <div class="step-number">1</div>
+          <div class="step-title">
+            <h4>Connect to Server</h4>
+            <div class="step-summary">WebSocket connection established</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>Technical Details:</h5>
+            <p>The client establishes a WebSocket connection to the MediaSoup server using Socket.IO for real-time bidirectional communication.</p>
+            <ul>
+              <li>Socket.IO handles connection management and reconnection</li>
+              <li>Server responds with RTP capabilities</li>
+              <li>Router is created on the server side</li>
+            </ul>
+            <div class="code-snippet">socket.emit('createRoom', callback)</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup/api/#router" class="external-link" target="_blank">
+              📖 MediaSoup Router Documentation ↗
+            </a>
+          </div>
+        </div>
       </div>
 
       <div class="step" id="step2">
-        <div class="step-number">2</div>
-        <h4>Access Camera</h4>
-        <p>Request permission to access your camera and microphone. Your local video will appear.</p>
+        <div class="step-header" onclick="toggleStep('step2')">
+          <div class="step-number">2</div>
+          <div class="step-title">
+            <h4>Access Camera</h4>
+            <div class="step-summary">Request camera permissions</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>getUserMedia API:</h5>
+            <p>Browser requests access to camera and microphone using the modern getUserMedia API.</p>
+            <ul>
+              <li>Prompts user for camera permission</li>
+              <li>Captures video stream with specified constraints</li>
+              <li>Displays local video in the interface</li>
+            </ul>
+            <div class="code-snippet">navigator.mediaDevices.getUserMedia({video: true})</div>
+            <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia" class="external-link" target="_blank">
+              📖 getUserMedia API Reference ↗
+            </a>
+          </div>
+        </div>
       </div>
 
       <div class="step" id="step3">
-        <div class="step-number">3</div>
-        <h4>Create Transport</h4>
-        <p>Establish WebRTC transport connection to send your video stream to the server.</p>
+        <div class="step-header" onclick="toggleStep('step3')">
+          <div class="step-number">3</div>
+          <div class="step-title">
+            <h4>Create Transport</h4>
+            <div class="step-summary">WebRTC transport setup</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>WebRTC Transport:</h5>
+            <p>Creates a WebRTC transport for sending media to the server using ICE, DTLS, and SRTP protocols.</p>
+            <ul>
+              <li>ICE candidates for NAT traversal</li>
+              <li>DTLS for secure key exchange</li>
+              <li>SRTP for encrypted media transport</li>
+            </ul>
+            <div class="code-snippet">device.createSendTransport(params)</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport" class="external-link" target="_blank">
+              📖 Transport API Documentation ↗
+            </a>
+          </div>
+        </div>
       </div>
 
       <div class="step" id="step4">
-        <div class="step-number">4</div>
-        <h4>Start Publishing</h4>
-        <p>Your video stream is now being sent to the MediaSoup server for distribution.</p>
+        <div class="step-header" onclick="toggleStep('step4')">
+          <div class="step-number">4</div>
+          <div class="step-title">
+            <h4>Start Publishing</h4>
+            <div class="step-summary">Send video to server</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>Producer Creation:</h5>
+            <p>The transport creates a producer that sends the video track to the MediaSoup server.</p>
+            <ul>
+              <li>RTP parameters negotiated</li>
+              <li>Video encoding starts (VP8/H.264)</li>
+              <li>Server receives and processes stream</li>
+            </ul>
+            <div class="code-snippet">transport.produce({track, ...params})</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup/api/#producer" class="external-link" target="_blank">
+              📖 Producer API Reference ↗
+            </a>
+          </div>
+        </div>
       </div>
 
       <div class="step" id="step5">
-        <div class="step-number">5</div>
-        <h4>Consume Stream</h4>
-        <p>Receive and display the video stream from the server. You'll see your own video as "remote".</p>
+        <div class="step-header" onclick="toggleStep('step5')">
+          <div class="step-number">5</div>
+          <div class="step-title">
+            <h4>Consume Stream</h4>
+            <div class="step-summary">Receive video from server</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>Consumer Creation:</h5>
+            <p>Creates a consumer to receive the video stream from the server and display it.</p>
+            <ul>
+              <li>Server checks if consumption is possible</li>
+              <li>Consumer transport receives RTP packets</li>
+              <li>Video decoded and displayed in browser</li>
+            </ul>
+            <div class="code-snippet">transport.consume({id, producerId, ...})</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup/api/#consumer" class="external-link" target="_blank">
+              📖 Consumer API Reference ↗
+            </a>
+          </div>
+        </div>
       </div>
 
       <div class="info-box">
-        <h4>About MediaSoup</h4>
-        <p>MediaSoup is a WebRTC SFU (Selective Forwarding Unit) that efficiently routes media streams between peers without transcoding, making it perfect for real-time video applications.</p>
+        <h4>About MediaSoup SFU</h4>
+        <p>MediaSoup is a cutting-edge WebRTC SFU that efficiently routes media streams without transcoding, making it perfect for scalable real-time applications.</p>
+        <a href="https://mediasoup.org/" class="external-link" target="_blank">
+          🌐 Visit MediaSoup Official Site ↗
+        </a>
       </div>
     </div>
   </div>
 
   <script>
     let currentStep = 1;
+
+    function toggleStep(stepId) {
+      const step = document.getElementById(stepId);
+      step.classList.toggle('expanded');
+    }
 
     function setActiveStep(stepNum) {
       // Mark previous steps as completed
@@ -381,7 +554,7 @@
       }
     }
 
-    // Button event listeners with the correct IDs from your original code
+    // Button event listeners
     document.getElementById('btnLocalVideo').addEventListener('click', () => {
       setActiveStep(2);
       setVideoContainerActive('localContainer', true);

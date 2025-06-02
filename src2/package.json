@@ -1,0 +1,23 @@
+{
+  "name": "test-mediasoup",
+  "version": "1.0.0",
+  "description": "mediasoup test",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon app.js",
+    "watch": "watchify public/index.js -o public/bundle.js -v"
+  },
+  "author": "prik",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "httpolyglot": "^0.1.2",
+    "mediasoup": "^3.16.0",
+    "mediasoup-client": "^3.6.39",
+    "nodemon": "^3.1.10",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  }
+}

@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MediaSoup Demo</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 25px;
+      height: calc(100vh - 40px);
+    }
+
+    .main-panel {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      padding: 25px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2d3748;
+      font-size: 2rem;
+      font-weight: 600;
+    }
+
+    .video-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .video-container {
+      display: flex;
+      flex-direction: column;
+      background: #f7fafc;
+      border-radius: 12px;
+      padding: 15px;
+      border: 2px solid #e2e8f0;
+      transition: border-color 0.3s ease;
+    }
+
+    .video-container.active {
+      border-color: #4299e1;
+      box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
+    }
+
+    .video-container h3 {
+      margin-bottom: 10px;
+      color: #4a5568;
+      font-size: 1.1rem;
+      text-align: center;
+    }
+
+    video {
+      width: 100%;
+      height: 200px;
+      background: #1a202c;
+      border-radius: 8px;
+      object-fit: cover;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      background: #4299e1;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      min-width: 120px;
+    }
+
+    button:hover {
+      background: #3182ce;
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      background: #a0aec0;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .sidebar h2 {
+      margin-bottom: 20px;
+      color: #2d3748;
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .step {
+      margin-bottom: 15px;
+      background: #f7fafc;
+      border-radius: 10px;
+      border-left: 4px solid #e2e8f0;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .step-header {
+      padding: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .step.active {
+      border-left-color: #4299e1;
+      background: #ebf8ff;
+      transform: translateX(5px);
+    }
+
+    .step.completed {
+      border-left-color: #48bb78;
+      background: #f0fff4;
+    }
+
+    .step-number {
+      width: 24px;
+      height: 24px;
+      background: #e2e8f0;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: #4a5568;
+      transition: all 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .step.active .step-number {
+      background: #4299e1;
+      color: white;
+    }
+
+    .step.completed .step-number {
+      background: #48bb78;
+      color: white;
+    }
+
+    .step-title {
+      flex: 1;
+    }
+
+    .step h4 {
+      margin-bottom: 4px;
+      color: #2d3748;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .step-summary {
+      color: #718096;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .expand-icon {
+      font-size: 12px;
+      color: #a0aec0;
+      transition: transform 0.3s ease;
+    }
+
+    .step.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+
+    .step-details {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 12px;
+    }
+
+    .step.expanded .step-details {
+      max-height: 300px;
+    }
+
+    .step-content {
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .step-content h5 {
+      color: #2d3748;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .step-content p {
+      color: #4a5568;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .step-content ul {
+      margin-left: 16px;
+      margin-bottom: 12px;
+    }
+
+    .step-content li {
+      color: #4a5568;
+      font-size: 13px;
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+
+    .code-snippet {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 12px;
+      margin: 8px 0;
+      overflow-x: auto;
+    }
+
+    .external-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: #4299e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    .external-link:hover {
+      color: #3182ce;
+      text-decoration: underline;
+    }
+
+    .info-box {
+      background: #edf2f7;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      border-left: 4px solid #4299e1;
+    }
+
+    .info-box h4 {
+      color: #2d3748;
+      margin-bottom: 8px;
+      font-size: 0.9rem;
+    }
+
+    .info-box p {
+      color: #4a5568;
+      font-size: 13px;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    @media (max-width: 1024px) {
+      .container {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+      
+      .sidebar {
+        order: -1;
+      }
+      
+      .video-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .controls {
+        flex-direction: column;
+        align-items: center;
+      }
+      
+      button {
+        width: 100%;
+        max-width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="main-panel">
+      <h1>MediaSoup WebRTC Demo</h1>
+      
+      <div class="video-section">
+        <div class="video-grid">
+          <div class="video-container" id="localContainer">
+            <h3>
+              <span class="status-indicator"></span>
+              Your Camera
+            </h3>
+            <video id="localVideo" autoplay muted></video>
+          </div>
+          
+          <div class="video-container" id="remoteContainer">
+            <h3>
+              <span class="status-indicator"></span>
+              Remote Stream
+            </h3>
+            <video id="remoteVideo" autoplay></video>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="btnLocalVideo">Start Publishing</button>
+        <button id="btnStopVideo">Stop</button>
+        <button id="btnRecvSendTransport">Start Consuming</button>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <h2>How It Works</h2>
+      
+      <div class="step active" id="step1">
+        <div class="step-header" onclick="toggleStep('step1')">
+          <div class="step-number">1</div>
+          <div class="step-title">
+            <h4>Connect to Server</h4>
+            <div class="step-summary">WebSocket connection established</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>Technical Details:</h5>
+            <p>The client establishes a WebSocket connection to the MediaSoup server using Socket.IO for real-time bidirectional communication.</p>
+            <ul>
+              <li>Socket.IO handles connection management and reconnection</li>
+              <li>Server responds with RTP capabilities</li>
+              <li>Router is created on the server side</li>
+            </ul>
+            <div class="code-snippet">socket.emit('createRoom', callback)</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup/api/#router" class="external-link" target="_blank">
+              📖 MediaSoup Router Documentation ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" id="step2">
+        <div class="step-header" onclick="toggleStep('step2')">
+          <div class="step-number">2</div>
+          <div class="step-title">
+            <h4>Access Camera</h4>
+            <div class="step-summary">Request camera permissions</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>getUserMedia API:</h5>
+            <p>Browser requests access to camera and microphone using the modern getUserMedia API.</p>
+            <ul>
+              <li>Prompts user for camera permission</li>
+              <li>Captures video stream with specified constraints</li>
+              <li>Displays local video in the interface</li>
+            </ul>
+            <div class="code-snippet">navigator.mediaDevices.getUserMedia({video: true})</div>
+            <a href="https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia" class="external-link" target="_blank">
+              📖 getUserMedia API Reference ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" id="step3">
+        <div class="step-header" onclick="toggleStep('step3')">
+          <div class="step-number">3</div>
+          <div class="step-title">
+            <h4>Create Transport</h4>
+            <div class="step-summary">WebRTC transport setup</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>WebRTC Transport:</h5>
+            <p>Creates a WebRTC transport for sending media to the server using ICE, DTLS, and SRTP protocols.</p>
+            <ul>
+              <li>ICE candidates for NAT traversal</li>
+              <li>DTLS for secure key exchange</li>
+              <li>SRTP for encrypted media transport</li>
+            </ul>
+            <div class="code-snippet">device.createSendTransport(params)</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup-client/api/#transport" class="external-link" target="_blank">
+              📖 Transport API Documentation ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" id="step4">
+        <div class="step-header" onclick="toggleStep('step4')">
+          <div class="step-number">4</div>
+          <div class="step-title">
+            <h4>Start Publishing</h4>
+            <div class="step-summary">Send video to server</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>Producer Creation:</h5>
+            <p>The transport creates a producer that sends the video track to the MediaSoup server.</p>
+            <ul>
+              <li>RTP parameters negotiated</li>
+              <li>Video encoding starts (VP8/H.264)</li>
+              <li>Server receives and processes stream</li>
+            </ul>
+            <div class="code-snippet">transport.produce({track, ...params})</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup/api/#producer" class="external-link" target="_blank">
+              📖 Producer API Reference ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="step" id="step5">
+        <div class="step-header" onclick="toggleStep('step5')">
+          <div class="step-number">5</div>
+          <div class="step-title">
+            <h4>Consume Stream</h4>
+            <div class="step-summary">Receive video from server</div>
+          </div>
+          <div class="expand-icon">▼</div>
+        </div>
+        <div class="step-details">
+          <div class="step-content">
+            <h5>Consumer Creation:</h5>
+            <p>Creates a consumer to receive the video stream from the server and display it.</p>
+            <ul>
+              <li>Server checks if consumption is possible</li>
+              <li>Consumer transport receives RTP packets</li>
+              <li>Video decoded and displayed in browser</li>
+            </ul>
+            <div class="code-snippet">transport.consume({id, producerId, ...})</div>
+            <a href="https://mediasoup.org/documentation/v3/mediasoup/api/#consumer" class="external-link" target="_blank">
+              📖 Consumer API Reference ↗
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="info-box">
+        <h4>About MediaSoup SFU</h4>
+        <p>MediaSoup is a cutting-edge WebRTC SFU that efficiently routes media streams without transcoding, making it perfect for scalable real-time applications.</p>
+        <a href="https://mediasoup.org/" class="external-link" target="_blank">
+          🌐 Visit MediaSoup Official Site ↗
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentStep = 1;
+
+    function toggleStep(stepId) {
+      const step = document.getElementById(stepId);
+      step.classList.toggle('expanded');
+    }
+
+    function setActiveStep(stepNum) {
+      // Mark previous steps as completed
+      for (let i = 1; i < stepNum; i++) {
+        const step = document.getElementById(`step${i}`);
+        if (step) {
+          step.classList.remove('active');
+          step.classList.add('completed');
+        }
+      }
+      
+      // Set current step as active
+      document.querySelectorAll('.step').forEach(step => {
+        step.classList.remove('active');
+      });
+      
+      const activeStep = document.getElementById(`step${stepNum}`);
+      if (activeStep) {
+        activeStep.classList.add('active');
+        activeStep.classList.remove('completed');
+      }
+      
+      currentStep = stepNum;
+    }
+
+    function setVideoContainerActive(containerId, active) {
+      const container = document.getElementById(containerId);
+      if (container) {
+        if (active) {
+          container.classList.add('active');
+        } else {
+          container.classList.remove('active');
+        }
+      }
+    }
+
+    // Button event listeners
+    document.getElementById('btnLocalVideo').addEventListener('click', () => {
+      setActiveStep(2);
+      setVideoContainerActive('localContainer', true);
+      
+      if (typeof getLocalStream === 'function') {
+        getLocalStream();
+        setTimeout(() => {
+          setActiveStep(3);
+          setTimeout(() => setActiveStep(4), 1000);
+        }, 1000);
+      }
+    });
+
+    document.getElementById('btnStopVideo').addEventListener('click', () => {
+      setActiveStep(1);
+      setVideoContainerActive('localContainer', false);
+      setVideoContainerActive('remoteContainer', false);
+      
+      if (typeof stopVideoStream === 'function') {
+        stopVideoStream();
+      }
+    });
+
+    document.getElementById('btnRecvSendTransport').addEventListener('click', () => {
+      setActiveStep(5);
+      setVideoContainerActive('remoteContainer', true);
+      
+      if (typeof Consume === 'function') {
+        Consume();
+      }
+    });
+  </script>
+  
+  <script src="bundle.js"></script>
+</body>
+</html>

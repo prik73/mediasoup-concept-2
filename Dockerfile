@@ -1,27 +1,32 @@
 FROM ubuntu 
 
-#installing dependencies for ubuntu image
+# Installing dependencies for ubuntu image
 RUN apt-get update && \
     apt-get install -y build-essential python3-pip net-tools iputils-ping iproute2 curl
 
-#for nodejs's installation
+# For nodejs's installation
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 RUN apt-get install -y nodejs
 
-#watchify(does kindoff same work as vite)
+# Watchify installation
 RUN npm install -g watchify
 
-#setting working directory inside container
-WORKDIR ./usr/src/app
+# Create the test-mediasoup directory (matching your manual setup)
+RUN mkdir -p /test-mediasoup
 
-COPY ./src1 ./
+# Set working directory to match your container setup
+WORKDIR /test-mediasoup
 
-#cause obv, we'll have to install the dependencies
+# Copy the source code (change src1 to src2/src2_v2 as needed)
+COPY ./src1/ /test-mediasoup/
+
+# Install dependencies
 RUN npm install
 
-#ports and all opening
+# Expose ports
 EXPOSE 3000
 EXPOSE 2000-2020
 EXPOSE 10000-10100
 
-CMD ["npm", "start"]
+# # Default command
+# CMD ["npm", "start"]

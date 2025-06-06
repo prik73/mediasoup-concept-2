@@ -15,12 +15,13 @@ A **MediaSoup WebRTC** server running inside a Docker container using an Ubuntu 
 ---
 
 ## 📁 Project Structure
+
 media_soups/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── src1/ # Initial version
 ├── src2/ # Second iteration
-├── src2_v2/ # Includes explanations and minimal documentation
+├── src2_v2/ # With basic docs and explanations
 └── final_version/ # Final version with dynamic room support
 
 

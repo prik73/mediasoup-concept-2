@@ -1,16 +1,27 @@
-MediaSoup Docker Project
-A MediaSoup WebRTC server running in Docker (which is using ubuntu image)/
-Quick Start
-Requirements
+# 🛰️ MediaSoup Docker Project
 
-project structure- 
-    there is Dockerfile
-             docker-compose file
-             src1 (initial version)
-             src2 (second iteration)
-             src2_v2 (has explantions to how the whole thingy works with docs(lil bit))
+A **MediaSoup WebRTC** server running inside a Docker container using an Ubuntu base image.
 
-             final_version
+---
+
+## 🚀 Quick Start
+
+### 📦 Requirements
+
+- **Docker**
+- **Docker Compose** (specifically **v1**)
+- **Internet Connection**
+
+---
+
+## 📁 Project Structure
+media_soups/
+├── Dockerfile
+├── docker-compose.yml
+├── src1/ # Initial version
+├── src2/ # Second iteration
+├── src2_v2/ # Includes explanations and minimal documentation
+└── final_version/ # Final version with dynamic room support
 
 
 what we need: 

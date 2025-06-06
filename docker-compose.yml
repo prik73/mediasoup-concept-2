@@ -10,7 +10,6 @@ services:
       - "10000-10100:10000-10100"
     volumes:
       # Map your host source to the test-mediasoup folder
-      - ./src1:/test-mediasoupdocker-compose up --build
+      - ./src1:/test-mediasoup
     working_dir: /test-mediasoup
-
-    CMD ["sh", "-c", "npm run watch & npm start"]
+    command: sh -c "npm run watch & npm start"

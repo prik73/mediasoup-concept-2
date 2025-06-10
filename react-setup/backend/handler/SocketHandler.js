@@ -5,7 +5,10 @@ export class SocketHandler {
 
   handleConnection(socket) {
     console.log(`🔌 New connection: ${socket.id}`)
+    
     socket.emit('connection-success', { socketId: socket.id })
+
+    // Set up all socket event handlers
     this.setupEventHandlers(socket)
   }
 
@@ -23,31 +26,12 @@ export class SocketHandler {
 
   handleDisconnect(socket) {
     console.log(`🔌 Peer disconnected: ${socket.id}`)
-    
-    // Notify other peers before cleanup
-    const peer = this.mediasoupService.peers[socket.id]
-    if (peer && peer.roomName) {
-      const room = this.mediasoupService.rooms[peer.roomName]
-      if (room) {
-        room.peers.forEach(peerId => {
-          if (peerId !== socket.id) {
-            const otherPeer = this.mediasoupService.peers[peerId]
-            if (otherPeer && otherPeer.socket) {
-              // Notify about all producers being closed
-              peer.producers.forEach(producerId => {
-                otherPeer.socket.emit('producer-closed', { remoteProducerId: producerId })
-              })
-            }
-          }
-        })
-      }
-    }
-    
     this.mediasoupService.cleanupPeer(socket.id)
   }
 
   async handleJoinRoom(socket, { roomName }, callback) {
     try {
+      // Check if peer already exists (prevent double joining)
       if (this.mediasoupService.peers[socket.id]) {
         console.log(`⚠️ Peer ${socket.id} already in a room`)
         const existingPeer = this.mediasoupService.peers[socket.id]
@@ -60,12 +44,17 @@ export class SocketHandler {
 
       const router = await this.mediasoupService.createRoom(roomName, socket.id)
       
+      // Store peer info
       this.mediasoupService.peers[socket.id] = {
         socket,
         roomName,
         transports: [],
         producers: [],
-        consumers: []
+        consumers: [],
+        peerDetails: {
+          name: '',
+          isAdmin: false,
+        }
       }
 
       const rtpCapabilities = router.rtpCapabilities
@@ -103,7 +92,6 @@ export class SocketHandler {
       callback({ params: { error: error.message } })
     }
   }
-
   handleTransportConnect(socket, { dtlsParameters }) {
     try {
       console.log('🔗 DTLS params received')
@@ -114,12 +102,14 @@ export class SocketHandler {
         return
       }
 
+      // Check if transport is already connected
       if (transport.connectionState === 'connected') {
         console.log('🔗 Transport already connected, skipping...')
         return
       }
 
       transport.connect({ dtlsParameters }).catch(error => {
+        // Ignore if already connected
         if (!error.message.includes('already called')) {
           console.error('Transport connect error:', error)
         }
@@ -147,7 +137,6 @@ export class SocketHandler {
       const { roomName } = peer
       this.mediasoupService.addProducer(socket.id, producer, roomName)
       
-      // Inform all other peers in the room about this new producer
       this.informConsumers(roomName, socket.id, producer.id)
 
       console.log(`🎥 Producer created: ${producer.id}, kind: ${producer.kind}`)
@@ -178,7 +167,7 @@ export class SocketHandler {
 
       const { roomName } = peer
       const producerList = this.mediasoupService.getProducersInRoom(roomName, socket.id)
-      console.log(`📋 Available producers for ${socket.id}: ${producerList}`)
+      console.log(`📋 Available producers: ${producerList}`)
       callback(producerList)
     } catch (error) {
       console.error('Error getting producers:', error)
@@ -199,6 +188,7 @@ export class SocketHandler {
         return
       }
 
+      // Check if already connected
       if (consumerTransport.connectionState === 'connected') {
         console.log('🔗 Consumer transport already connected, skipping...')
         return
@@ -211,7 +201,6 @@ export class SocketHandler {
       }
     }
   }
-
   async handleConsume(socket, { rtpCapabilities, remoteProducerId, serverConsumerTransportId }, callback) {
     try {
       const peer = this.mediasoupService.peers[socket.id]
@@ -245,6 +234,7 @@ export class SocketHandler {
           console.log('🎥 Producer closed from consumer side')
           socket.emit('producer-closed', { remoteProducerId })
           
+          // Clean up
           consumerTransport.close()
           consumer.close()
           
@@ -290,24 +280,48 @@ export class SocketHandler {
     }
   }
 
-  informConsumers(roomName, socketId, producerId) {
+    informConsumers(roomName, socketId, producerId) {
     console.log(`📢 Informing all peers in room ${roomName} about new producer ${producerId}`)
     
+    // Get the room object to access its list of peers
     const room = this.mediasoupService.rooms[roomName]
     if (!room) {
-      console.error(`Room ${roomName} not found`)
-      return
+        console.error(`Room ${roomName} not found for informing consumers.`)
+        return
     }
 
-    // Send new-producer event to all other peers in the room
-    room.peers.forEach(peerId => {
-      if (peerId !== socketId) {
+    // Get all peers in the room except the one who just produced
+    const peersToInform = room.peers.filter(peerId => peerId !== socketId)
+    console.log(`Informing ${peersToInform.length} peers:`, peersToInform)
+
+    peersToInform.forEach(peerId => {
         const peer = this.mediasoupService.peers[peerId]
         if (peer && peer.socket && peer.socket.connected) {
-          console.log(`Sending new-producer to ${peerId}`)
-          peer.socket.emit('new-producer', { producerId })
+        console.log(`Sending new-producer to peer ${peerId}`)
+        peer.socket.emit('new-producer', { producerId })
+        } else {
+        console.warn(`Peer ${peerId} not found or socket not connected`)
         }
-      }
     })
+    }
+debugRoomState(roomName) {
+  const room = this.mediasoupService.rooms[roomName]
+  if (!room) {
+    console.log(`Room ${roomName} does not exist`)
+    return
   }
+
+  console.log(`=== Room ${roomName} Debug Info ===`)
+  console.log(`Peers in room:`, room.peers)
+  console.log(`Total producers:`, this.mediasoupService.producers.length)
+  console.log(`Producers in this room:`, 
+    this.mediasoupService.producers.filter(p => p.roomName === roomName).map(p => ({
+      socketId: p.socketId,
+      producerId: p.producer.id,
+      kind: p.producer.kind
+    }))
+  )
+  console.log(`Total consumers:`, this.mediasoupService.consumers.length)
+  console.log(`================================`)
+}
 }

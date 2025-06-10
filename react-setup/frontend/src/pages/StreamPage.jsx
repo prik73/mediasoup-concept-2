@@ -8,7 +8,7 @@ const StreamPage = () => {
   const [remoteUsers, setRemoteUsers] = useState(new Map())
   const [isConnected, setIsConnected] = useState(false)
   const webrtcRef = useRef(null)
-  const userStreamsRef = useRef(new Map()) // Track streams per user
+  const userStreamsRef = useRef(new Map())
 
   useEffect(() => {
     const init = async () => {
@@ -18,12 +18,7 @@ const StreamPage = () => {
         webrtcRef.current.on('localStream', setLocalStream)
         
         webrtcRef.current.on('remoteStream', (producerId, stream) => {
-          // Extract socketId from producerId
           const socketId = producerId.split('-')[0]
-          
-          // Store this stream
-          const tracks = stream.getTracks()
-          const trackType = tracks[0]?.kind || 'unknown'
           
           if (!userStreamsRef.current.has(socketId)) {
             userStreamsRef.current.set(socketId, {
@@ -34,8 +29,8 @@ const StreamPage = () => {
           }
           
           const userInfo = userStreamsRef.current.get(socketId)
+          const tracks = stream.getTracks()
           
-          // Add track to user's stream
           tracks.forEach(track => {
             if (track.kind === 'audio') {
               if (userInfo.audio) userInfo.stream.removeTrack(userInfo.audio)
@@ -47,7 +42,6 @@ const StreamPage = () => {
             userInfo.stream.addTrack(track)
           })
           
-          // Update state only if we have at least video
           if (userInfo.video) {
             setRemoteUsers(prev => new Map(prev).set(socketId, userInfo.stream))
           }
@@ -55,14 +49,12 @@ const StreamPage = () => {
         
         webrtcRef.current.on('streamRemoved', (producerId) => {
           const socketId = producerId.split('-')[0]
-          
-          // Check if this user has any remaining tracks
           const userInfo = userStreamsRef.current.get(socketId)
+          
           if (userInfo) {
             const tracks = producerId.includes('audio') ? 'audio' : 'video'
             userInfo[tracks] = null
             
-            // Remove user if no tracks remain
             if (!userInfo.audio && !userInfo.video) {
               userStreamsRef.current.delete(socketId)
               setRemoteUsers(prev => {
@@ -91,74 +83,66 @@ const StreamPage = () => {
   }, [roomId])
 
   return (
-    <div className="stream-page">
-      <div className="stream-header">
-        <h2>Room: {roomId}</h2>
-        <div className={`status ${isConnected ? 'connected' : 'disconnected'}`}>
-          {isConnected ? '🟢 Connected' : '🔴 Connecting...'}
+    <div className="min-h-screen bg-gray-900 text-white p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-semibold">Room: {roomId}</h2>
+        <div className={`px-3 py-1 rounded-full text-sm ${
+          isConnected ? 'bg-green-600' : 'bg-red-600'
+        }`}>
+          {isConnected ? '● Connected' : '● Connecting...'}
         </div>
       </div>
-      
-      <div className="video-layout">
-        <div className="local-section">
-          <h3>Your Video</h3>
-          <LocalVideo stream={localStream} />
+
+      {/* Video Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-7xl mx-auto">
+        {/* Local Video */}
+        <div className="space-y-2">
+          <h3 className="text-sm text-gray-400">You</h3>
+          <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+            {localStream ? (
+              <video
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-full object-cover"
+                ref={el => el && (el.srcObject = localStream)}
+              />
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="text-gray-500">Camera starting...</div>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="remote-section">
-          <h3>Remote Participants ({remoteUsers.size})</h3>
+        {/* Remote Videos */}
+        <div className="space-y-2">
+          <h3 className="text-sm text-gray-400">
+            Remote Participants ({remoteUsers.size})
+          </h3>
           {remoteUsers.size === 0 ? (
-            <div className="no-streams">No other participants</div>
+            <div className="bg-gray-800 rounded-lg aspect-video flex items-center justify-center">
+              <p className="text-gray-500">Waiting for others to join...</p>
+            </div>
           ) : (
-            <div className="video-grid">
+            <div className="grid grid-cols-1 gap-4">
               {Array.from(remoteUsers.entries()).map(([userId, stream]) => (
-                <RemoteVideo key={userId} userId={userId} stream={stream} />
+                <div key={userId} className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+                  <video
+                    autoPlay
+                    playsInline
+                    className="w-full h-full object-cover"
+                    ref={el => el && (el.srcObject = stream)}
+                  />
+                  <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-xs">
+                    User {userId.slice(-6)}
+                  </div>
+                </div>
               ))}
             </div>
           )}
         </div>
-      </div>
-    </div>
-  )
-}
-
-const LocalVideo = ({ stream }) => {
-  const videoRef = useRef(null)
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream
-    }
-  }, [stream])
-
-  return (
-    <video
-      ref={videoRef}
-      autoPlay
-      muted
-      className="local-video"
-    />
-  )
-}
-
-const RemoteVideo = ({ userId, stream }) => {
-  const videoRef = useRef(null)
-
-  useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream
-    }
-  }, [stream])
-
-  return (
-    <div className="remote-video-container">
-      <video
-        ref={videoRef}
-        autoPlay
-        className="remote-video"
-      />
-      <div className="video-label">
-        User {userId.slice(-6)}
       </div>
     </div>
   )

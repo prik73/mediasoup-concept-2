@@ -1,0 +1,194 @@
+[nodemon] app crashed - waiting for file changes before starting...
+[nodemon] restarting due to changes...
+[nodemon] starting `node app.js`
+🚀 Server running on port: 3000
+📡 WebRTC endpoint: wss://localhost:3000/socket.io/
+📺 HLS endpoint: https://localhost:3000/hls/
+Worker PID: 268377
+✅ Mediasoup ready
+🎉 Server fully initialized and ready for connections
+🔌 New connection: TZU5aGg8dMrm4zlfAAAB
+🔌 New connection: GmGKGivCUl8YDFcTAAAD
+🔌 New connection: h_u7Z98ss-htjab5AAAH
+🔌 Peer disconnected: GmGKGivCUl8YDFcTAAAD
+🔌 New connection: ZBC2pL-IohNZJuRSAAAJ
+📺 Created new router for room: room1
+Router ID: d97b054e-3460-485d-bb50-a7d8bfe48c19, Peers: 0
+🚛 Transport created: f451e0b4-ee95-43ed-8f07-7eb9a25973a3
+🔗 DTLS params received
+📢 Informing all peers in room room1 about new producer 2d98907b-41c1-46b9-95d5-f582ad5ed34f
+Informing 0 peers: []
+🎥 Producer created: 2d98907b-41c1-46b9-95d5-f582ad5ed34f, kind: audio
+⏳ Waiting for video producer in room room1
+📢 Informing all peers in room room1 about new producer d117d717-5df7-481c-a647-5dbeaa62609e
+Informing 0 peers: []
+🎥 Producer created: d117d717-5df7-481c-a647-5dbeaa62609e, kind: video
+🎬 Starting HLS stream for room room1 (2 producers)
+📋 Available producers: 
+🎬 Starting HLS stream for room: room1
+📹 Video producer: d117d717-5df7-481c-a647-5dbeaa62609e
+🎵 Audio producer: 2d98907b-41c1-46b9-95d5-f582ad5ed34f
+Allocated port 39040 (and 39041 for RTCP)
+⚠️  Port 39040 in use, trying another...
+Allocated port 36120 (and 36121 for RTCP)
+⚠️  Port 36120 in use, trying another...
+Allocated port 41942 (and 41943 for RTCP)
+⚠️  Port 41942 in use, trying another...
+Allocated port 35530 (and 35531 for RTCP)
+⚠️  Port 35530 in use, trying another...
+Allocated port 35902 (and 35903 for RTCP)
+⚠️  Port 35902 in use, trying another...
+Allocated port 35966 (and 35967 for RTCP)
+❌ Failed to start stream for room1: Error: Failed to create video transport after 5 attempts
+    at Module.startRoomStream (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/services/mediasoupToHls.js:135:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Timeout._onTimeout (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/handler/SocketHandler.js:194:27)
+❌ Failed to start HLS stream for room room1
+🔌 Peer disconnected: h_u7Z98ss-htjab5AAAH
+🔌 New connection: fBT5OTNniWPrPUNHAAAL
+📺 Joining existing room: room1
+Router ID: d97b054e-3460-485d-bb50-a7d8bfe48c19, Peers: 1
+🚛 Transport created: 43bb56f0-7dfa-4398-8413-75205f93b137
+🔗 DTLS params received
+📢 Informing all peers in room room1 about new producer 3c75af8c-cbe8-4872-9031-8c5f5c932e0b
+Informing 1 peers: [ 'ZBC2pL-IohNZJuRSAAAJ' ]
+Sending new-producer to peer ZBC2pL-IohNZJuRSAAAJ
+🎥 Producer created: 3c75af8c-cbe8-4872-9031-8c5f5c932e0b, kind: audio
+🎬 Starting HLS stream for room room1 (3 producers)
+🚛 Transport created: 00d2f18a-1134-4bad-969f-ae507fca1e80
+🔗 Consumer transport connect
+▶️ Consumer resume
+📢 Informing all peers in room room1 about new producer d0e3cf60-9cc1-4e1c-97d5-40c183ab32ca
+Informing 1 peers: [ 'ZBC2pL-IohNZJuRSAAAJ' ]
+Sending new-producer to peer ZBC2pL-IohNZJuRSAAAJ
+🎥 Producer created: d0e3cf60-9cc1-4e1c-97d5-40c183ab32ca, kind: video
+🎬 Starting HLS stream for room room1 (4 producers)
+📋 Available producers: 2d98907b-41c1-46b9-95d5-f582ad5ed34f,d117d717-5df7-481c-a647-5dbeaa62609e
+🚛 Transport created: 2af1a589-3202-4273-a6f5-799850b1ff34
+🚛 Transport created: 21143366-ae7d-42f3-a28a-e0108111db92
+🚛 Transport created: 12600b6c-472f-4dfb-820c-c429f9de6862
+🔗 Consumer transport connect
+🔗 Consumer transport connect
+🔗 Consumer transport connect
+▶️ Consumer resume
+▶️ Consumer resume
+▶️ Consumer resume
+🎬 Starting HLS stream for room: room1
+�� Video producer: d117d717-5df7-481c-a647-5dbeaa62609e
+🎵 Audio producer: 2d98907b-41c1-46b9-95d5-f582ad5ed34f
+Allocated port 45248 (and 45249 for RTCP)
+⚠️  Port 45248 in use, trying another...
+Allocated port 36674 (and 36675 for RTCP)
+⚠️  Port 36674 in use, trying another...
+Allocated port 43936 (and 43937 for RTCP)
+⚠️  Port 43936 in use, trying another...
+Allocated port 40970 (and 40971 for RTCP)
+⚠️  Port 40970 in use, trying another...
+Allocated port 40168 (and 40169 for RTCP)
+⚠️  Port 40168 in use, trying another...
+Allocated port 37164 (and 37165 for RTCP)
+❌ Failed to start stream for room1: Error: Failed to create video transport after 5 attempts
+    at Module.startRoomStream (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/services/mediasoupToHls.js:135:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Timeout._onTimeout (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/handler/SocketHandler.js:194:27)
+❌ Failed to start HLS stream for room room1
+🎬 Starting HLS stream for room: room1
+📹 Video producer: d117d717-5df7-481c-a647-5dbeaa62609e
+🎵 Audio producer: 2d98907b-41c1-46b9-95d5-f582ad5ed34f
+Allocated port 46292 (and 46293 for RTCP)
+⚠️  Port 46292 in use, trying another...
+Allocated port 34778 (and 34779 for RTCP)
+⚠️  Port 34778 in use, trying another...
+Allocated port 37808 (and 37809 for RTCP)
+⚠️  Port 37808 in use, trying another...
+Allocated port 34838 (and 34839 for RTCP)
+⚠️  Port 34838 in use, trying another...
+Allocated port 33486 (and 33487 for RTCP)
+⚠️  Port 33486 in use, trying another...
+Allocated port 46764 (and 46765 for RTCP)
+❌ Failed to start stream for room1: Error: Failed to create video transport after 5 attempts
+    at Module.startRoomStream (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/services/mediasoupToHls.js:135:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Timeout._onTimeout (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/handler/SocketHandler.js:194:27)
+❌ Failed to start HLS stream for room room1
+🔌 Peer disconnected: TZU5aGg8dMrm4zlfAAAB
+🔌 New connection: HaVOfQDqMKbPQq1TAAAN
+📺 Joining existing room: room1
+Router ID: d97b054e-3460-485d-bb50-a7d8bfe48c19, Peers: 2
+🚛 Transport created: 0950c296-3d97-4ce9-a68b-189db637f7dc
+🔗 DTLS params received
+📢 Informing all peers in room room1 about new producer c32f441d-57f9-4458-9e1b-675d397c9877
+Informing 2 peers: [ 'ZBC2pL-IohNZJuRSAAAJ', 'fBT5OTNniWPrPUNHAAAL' ]
+Sending new-producer to peer ZBC2pL-IohNZJuRSAAAJ
+Sending new-producer to peer fBT5OTNniWPrPUNHAAAL
+�� Producer created: c32f441d-57f9-4458-9e1b-675d397c9877, kind: audio
+🎬 Starting HLS stream for room room1 (5 producers)
+🚛 Transport created: 50ea19e8-3949-44c7-b3bc-f38de6a91dfd
+🚛 Transport created: 0833ee86-df84-4eb7-ac4e-70fd1d5dac66
+🔗 Consumer transport connect
+▶️ Consumer resume
+🔗 Consumer transport connect
+▶️ Consumer resume
+📢 Informing all peers in room room1 about new producer 7d935a4f-ee3e-4504-97ed-938e7fae77ba
+Informing 2 peers: [ 'ZBC2pL-IohNZJuRSAAAJ', 'fBT5OTNniWPrPUNHAAAL' ]
+Sending new-producer to peer ZBC2pL-IohNZJuRSAAAJ
+Sending new-producer to peer fBT5OTNniWPrPUNHAAAL
+🎥 Producer created: 7d935a4f-ee3e-4504-97ed-938e7fae77ba, kind: video
+🎬 Starting HLS stream for room room1 (6 producers)
+📋 Available producers: 2d98907b-41c1-46b9-95d5-f582ad5ed34f,d117d717-5df7-481c-a647-5dbeaa62609e,3c75af8c-cbe8-4872-9031-8c5f5c932e0b,d0e3cf60-9cc1-4e1c-97d5-40c183ab32ca
+🚛 Transport created: 1727c06c-4bdc-478e-b619-c431a924c55c
+🚛 Transport created: 4fa28a9b-50f3-4606-99a6-8d59dd8b3c7f
+🚛 Transport created: fd51807d-a81a-47f9-93f6-da8e0628166d
+🚛 Transport created: cb846d29-63e3-41f6-87a3-a4d4093e0b13
+🚛 Transport created: 38c2718c-8627-4c48-8819-643a05a1c489
+🚛 Transport created: 202dcb7d-50ca-434d-8d0f-6d0057597f20
+🔗 Consumer transport connect
+🔗 Consumer transport connect
+▶️ Consumer resume
+▶️ Consumer resume
+🔗 Consumer transport connect
+🔗 Consumer transport connect
+▶️ Consumer resume
+▶️ Consumer resume
+🔗 Consumer transport connect
+🔗 Consumer transport connect
+▶️ Consumer resume
+▶️ Consumer resume
+🎬 Starting HLS stream for room: room1
+📹 Video producer: d117d717-5df7-481c-a647-5dbeaa62609e
+🎵 Audio producer: 2d98907b-41c1-46b9-95d5-f582ad5ed34f
+Allocated port 33516 (and 33517 for RTCP)
+⚠️  Port 33516 in use, trying another...
+Allocated port 37698 (and 37699 for RTCP)
+⚠️  Port 37698 in use, trying another...
+Allocated port 46498 (and 46499 for RTCP)
+⚠️  Port 46498 in use, trying another...
+Allocated port 41938 (and 41939 for RTCP)
+⚠️  Port 41938 in use, trying another...
+Allocated port 45818 (and 45819 for RTCP)
+⚠️  Port 45818 in use, trying another...
+Allocated port 41592 (and 41593 for RTCP)
+❌ Failed to start stream for room1: Error: Failed to create video transport after 5 attempts
+    at Module.startRoomStream (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/services/mediasoupToHls.js:135:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Timeout._onTimeout (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/handler/SocketHandler.js:194:27)
+❌ Failed to start HLS stream for room room1
+🎬 Starting HLS stream for room: room1
+📹 Video producer: d117d717-5df7-481c-a647-5dbeaa62609e
+�� Audio producer: 2d98907b-41c1-46b9-95d5-f582ad5ed34f
+Allocated port 35810 (and 35811 for RTCP)
+⚠️  Port 35810 in use, trying another...
+Allocated port 35486 (and 35487 for RTCP)
+⚠️  Port 35486 in use, trying another...
+Allocated port 39268 (and 39269 for RTCP)
+⚠️  Port 39268 in use, trying another...
+Allocated port 40910 (and 40911 for RTCP)
+⚠️  Port 40910 in use, trying another...
+Allocated port 46750 (and 46751 for RTCP)
+⚠️  Port 46750 in use, trying another...
+Allocated port 33790 (and 33791 for RTCP)
+❌ Failed to start stream for room1: Error: Failed to create video transport after 5 attempts
+    at Module.startRoomStream (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/services/mediasoupToHls.js:135:13)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Timeout._onTimeout (file:///home/prik/Desktop/project/concepts/media_soups/react-setup/backend/handler/SocketHandler.js:194:27)
+❌ Failed to start HLS stream for room room1

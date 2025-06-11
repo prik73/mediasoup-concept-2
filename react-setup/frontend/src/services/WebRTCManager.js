@@ -15,8 +15,7 @@ class WebRTCManager extends EventEmitter {
     this.rtpCapabilities = null
     this.roomName = null
     this.localStream = null
-    this.isConnected = false
-    
+
     this.params = {
       encodings: [
         {
@@ -43,161 +42,97 @@ class WebRTCManager extends EventEmitter {
 
   async initialize() {
     try {
-      // Get local stream first
-      await this.getLocalStream()
-      
-      // Initialize socket connection with proper URL detection
-      const socketUrl = window.location.protocol === 'https:' 
-        ? `${window.location.protocol}//${window.location.hostname}:3000`
-        : 'https://localhost:3000'
-      
-      console.log('Connecting to:', socketUrl)
-      
-      this.socket = io(`${socketUrl}/mediasoup`, {
+      // Initialize socket connection - connect to your backend server
+      this.socket = io('https://localhost:3000/mediasoup', {
         path: '/socket.io',
         transports: ['websocket'],
         upgrade: false,
-        secure: true,
-        rejectUnauthorized: false
+        secure: false,
+        rejectUnauthorized: false // For self-signed certificates
       })
 
       this.setupSocketListeners()
-      
-      // Wait for socket connection
-      return new Promise((resolve, reject) => {
-        this.socket.on('connection-success', ({ socketId }) => {
-          console.log('Connected with socket ID:', socketId)
-          this.isConnected = true
-          this.emit('connected')
-          resolve()
-        })
-        
-        this.socket.on('connect_error', (error) => {
-          console.error('Socket connection error:', error)
-          reject(error)
-        })
-        
-        // Timeout after 10 seconds
-        setTimeout(() => {
-          if (!this.isConnected) {
-            reject(new Error('Socket connection timeout'))
-          }
-        }, 10000)
-      })
-      
+      await this.getLocalStream()
+
     } catch (error) {
       console.error('WebRTC initialization failed:', error)
       throw error
     }
   }
-
   setupSocketListeners() {
     this.socket.on('connection-success', ({ socketId }) => {
       console.log('Connected with socket ID:', socketId)
-      this.isConnected = true
       this.emit('connected')
     })
 
     this.socket.on('new-producer', ({ producerId }) => {
-      console.log('New producer available:', producerId)
       this.signalNewConsumerTransport(producerId)
     })
 
     this.socket.on('producer-closed', ({ remoteProducerId }) => {
-      console.log('Producer closed:', remoteProducerId)
       this.handleProducerClosed(remoteProducerId)
     })
 
     this.socket.on('disconnect', () => {
       console.log('Socket disconnected')
-      this.isConnected = false
       this.emit('disconnected')
-    })
-
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error)
-      this.emit('error', error)
     })
   }
 
   async getLocalStream() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
+        audio: true,
         video: {
-          width: { min: 640, ideal: 1280, max: 1920 },
-          height: { min: 480, ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 60 }
+          width: { min: 640, max: 1920 },
+          height: { min: 400, max: 1080 }
         }
       })
-      
+
       this.localStream = stream
-      console.log('Local stream obtained:', stream.getTracks().map(t => t.kind))
       this.emit('localStream', stream)
-      
+
       return stream
     } catch (error) {
       console.error('getUserMedia error:', error)
-      throw new Error(`Camera/Microphone access denied: ${error.message}`)
+      throw error
     }
   }
 
   async joinRoom(roomName) {
-    if (!this.isConnected) {
-      throw new Error('Socket not connected')
-    }
-    
     this.roomName = roomName
-    console.log('Joining room:', roomName)
-    
+
     return new Promise((resolve, reject) => {
       this.socket.emit('joinRoom', { roomName }, async (data) => {
         try {
-          if (data.error) {
-            throw new Error(data.error)
-          }
-          
-          console.log('Router rtpCapabilities received')
+          console.log('Router rtpCapabilities:', data.rtpCapabilities)
           this.rtpCapabilities = data.rtpCapabilities
-          
+
           await this.createDevice()
-          
-          // Get existing producers after joining
-          setTimeout(() => {
-            this.getProducers()
-          }, 1000)
-          
+          await this.getProducers()
+
           resolve()
         } catch (error) {
-          console.error('Error in joinRoom callback:', error)
           reject(error)
         }
       })
     })
   }
-
   async createDevice() {
     try {
       this.device = new mediasoupClient.Device()
-      
+
       await this.device.load({
         routerRtpCapabilities: this.rtpCapabilities
       })
-      
+
       console.log('Device RTP capabilities loaded')
-      console.log('Can produce audio:', this.device.canProduce('audio'))
-      console.log('Can produce video:', this.device.canProduce('video'))
-      
       await this.createSendTransport()
-      
+
     } catch (error) {
       console.error('Device creation failed:', error)
-      if (error.name === "UnsupportedError") {
-        throw new Error("Browser not supported for WebRTC")
+      if (error.name === "unsupported error") {
+        throw new Error("Browser not supported")
       }
       throw error
     }
@@ -212,15 +147,11 @@ class WebRTCManager extends EventEmitter {
         }
 
         try {
-          console.log('Creating send transport with params:', params)
           this.producerTransport = this.device.createSendTransport(params)
-          
           this.setupProducerTransportListeners()
           await this.connectSendTransport()
-          
           resolve()
         } catch (error) {
-          console.error('Send transport creation failed:', error)
           reject(error)
         }
       })
@@ -230,77 +161,42 @@ class WebRTCManager extends EventEmitter {
   setupProducerTransportListeners() {
     this.producerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
       try {
-        console.log('Producer transport connecting...')
-        this.socket.emit('transport-connect', { dtlsParameters })
+        await this.socket.emit('transport-connect', { dtlsParameters })
         callback()
       } catch (error) {
-        console.error('Producer transport connect error:', error)
         errback(error)
       }
     })
 
     this.producerTransport.on('produce', async (parameters, callback, errback) => {
       try {
-        console.log('Producing:', parameters.kind)
         this.socket.emit('transport-produce', {
           kind: parameters.kind,
           rtpParameters: parameters.rtpParameters,
           appData: parameters.appData
-        }, ({ id, producersExist }) => {
+        }, ({ id, producersExists }) => {
           callback({ id })
-          
-          // Request existing producers when we start producing
-          if (producersExist) {
-            setTimeout(() => {
-              this.getProducers()
-            }, 500)
-          }
+          if (producersExists) this.getProducers()
         })
       } catch (error) {
-        console.error('Producer transport produce error:', error)
         errback(error)
       }
     })
-
-    this.producerTransport.on('connectionstatechange', (state) => {
-      console.log('Producer transport connection state:', state)
-    })
   }
-
   async connectSendTransport() {
-    if (!this.localStream) {
-      throw new Error('No local stream available')
-    }
-
     const audioTrack = this.localStream.getAudioTracks()[0]
     const videoTrack = this.localStream.getVideoTracks()[0]
 
-    console.log('Available tracks:', {
-      audio: !!audioTrack,
-      video: !!videoTrack
-    })
+    if (audioTrack) {
+      const audioParams = { track: audioTrack }
+      this.audioProducer = await this.producerTransport.produce(audioParams)
+      this.setupProducerListeners(this.audioProducer, 'audio')
+    }
 
-    try {
-      if (audioTrack && this.device.canProduce('audio')) {
-        const audioParams = { track: audioTrack }
-        this.audioProducer = await this.producerTransport.produce(audioParams)
-        this.setupProducerListeners(this.audioProducer, 'audio')
-        console.log('Audio producer created:', this.audioProducer.id)
-      }
-
-      if (videoTrack && this.device.canProduce('video')) {
-        const videoParams = { 
-          track: videoTrack, 
-          ...this.params,
-          appData: { source: 'webcam' }
-        }
-        this.videoProducer = await this.producerTransport.produce(videoParams)
-        this.setupProducerListeners(this.videoProducer, 'video')
-        console.log('Video producer created:', this.videoProducer.id)
-      }
-    } catch (error) {
-      console.error('Error creating producers:', error)
-      throw error
+    if (videoTrack) {
+      const videoParams = { track: videoTrack, ...this.params }
+      this.videoProducer = await this.producerTransport.produce(videoParams)
+      this.setupProducerListeners(this.videoProducer, 'video')
     }
   }
 
@@ -312,20 +208,11 @@ class WebRTCManager extends EventEmitter {
     producer.on('transportclose', () => {
       console.log(`${type} transport closed`)
     })
-
-    producer.on('close', () => {
-      console.log(`${type} producer closed`)
-    })
   }
 
   async signalNewConsumerTransport(remoteProducerId) {
-    if (this.consumingTransports.includes(remoteProducerId)) {
-      console.log('Already consuming producer:', remoteProducerId)
-      return
-    }
-    
+    if (this.consumingTransports.includes(remoteProducerId)) return
     this.consumingTransports.push(remoteProducerId)
-    console.log('Creating consumer transport for producer:', remoteProducerId)
 
     this.socket.emit('createWebRtcTransport', { consumer: true }, ({ params }) => {
       if (params.error) {
@@ -336,8 +223,6 @@ class WebRTCManager extends EventEmitter {
       let consumerTransport
       try {
         consumerTransport = this.device.createRecvTransport(params)
-        this.consumerTransports.push(consumerTransport)
-        
         this.setupConsumerTransportListeners(consumerTransport, params.id)
         this.connectRecvTransport(consumerTransport, remoteProducerId, params.id)
       } catch (error) {
@@ -349,20 +234,14 @@ class WebRTCManager extends EventEmitter {
   setupConsumerTransportListeners(consumerTransport, transportId) {
     consumerTransport.on('connect', async ({ dtlsParameters }, callback, errback) => {
       try {
-        console.log('Consumer transport connecting...')
-        this.socket.emit('transport-recv-connect', {
+        await this.socket.emit('transport-recv-connect', {
           dtlsParameters,
           serverConsumerTransportId: transportId,
         })
         callback()
       } catch (error) {
-        console.error('Consumer transport connect error:', error)
         errback(error)
       }
-    })
-
-    consumerTransport.on('connectionstatechange', (state) => {
-      console.log('Consumer transport connection state:', state)
     })
   }
 
@@ -378,7 +257,6 @@ class WebRTCManager extends EventEmitter {
       }
 
       try {
-        console.log('Creating consumer for producer:', remoteProducerId)
         const consumer = await consumerTransport.consume({
           id: params.id,
           producerId: params.producerId,
@@ -386,24 +264,17 @@ class WebRTCManager extends EventEmitter {
           rtpParameters: params.rtpParameters
         })
 
+        this.consumerTransports.push({
+          consumerTransport,
+          serverConsumerTransportId: params.id,
+          producerId: remoteProducerId,
+          consumer,
+        })
+
         const stream = new MediaStream([consumer.track])
-        console.log('Remote stream created:', stream.id, 'for producer:', remoteProducerId)
-        
         this.emit('remoteStream', remoteProducerId, stream)
 
-        // Resume the consumer
-        this.socket.emit('consumer-resume', { 
-          serverConsumerId: params.serverConsumerId 
-        })
-
-        consumer.on('close', () => {
-          console.log('Consumer closed:', consumer.id)
-        })
-
-        consumer.on('trackended', () => {
-          console.log('Consumer track ended:', consumer.id)
-        })
-
+        this.socket.emit('consumer-resume', { serverConsumerId: params.serverConsumerId })
       } catch (error) {
         console.error('Consumer setup failed:', error)
       }
@@ -411,72 +282,45 @@ class WebRTCManager extends EventEmitter {
   }
 
   getProducers() {
-    console.log('Requesting available producers...')
     this.socket.emit('getProducers', producerIds => {
       console.log('Available producers:', producerIds)
-      producerIds.forEach(id => {
-        if (!this.consumingTransports.includes(id)) {
-          this.signalNewConsumerTransport(id)
-        }
-      })
+      producerIds.forEach(id => this.signalNewConsumerTransport(id))
     })
   }
 
   handleProducerClosed(remoteProducerId) {
-    console.log('Handling producer closed:', remoteProducerId)
-    
-    // Remove from consuming transports
-    this.consumingTransports = this.consumingTransports.filter(id => id !== remoteProducerId)
-    
-    // Find and close related consumer transport
-    const relatedTransport = this.consumerTransports.find(transport => {
-      // You might need a better way to match this
-      return transport.appData?.producerId === remoteProducerId
-    })
+    const producerToClose = this.consumerTransports.find(transportData =>
+      transportData.producerId === remoteProducerId
+    )
 
-    if (relatedTransport) {
-      relatedTransport.close()
-      this.consumerTransports = this.consumerTransports.filter(t => t !== relatedTransport)
+    if (producerToClose) {
+      producerToClose.consumerTransport.close()
+      producerToClose.consumer.close()
+
+      this.consumerTransports = this.consumerTransports.filter(transportData =>
+        transportData.producerId !== remoteProducerId
+      )
+
+      this.emit('streamRemoved', remoteProducerId)
     }
-
-    this.emit('streamRemoved', remoteProducerId)
   }
 
   disconnect() {
-    console.log('Disconnecting WebRTC manager...')
-    
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => {
-        track.stop()
-        console.log('Stopped track:', track.kind)
-      })
-    }
-
-    if (this.audioProducer) {
-      this.audioProducer.close()
-    }
-
-    if (this.videoProducer) {
-      this.videoProducer.close()
-    }
-
-    this.consumerTransports.forEach(transport => {
-      transport.close()
-    })
-
-    if (this.producerTransport) {
-      this.producerTransport.close()
+      this.localStream.getTracks().forEach(track => track.stop())
     }
 
     if (this.socket) {
       this.socket.disconnect()
     }
+    this.consumerTransports.forEach(({ consumerTransport, consumer }) => {
+      consumerTransport.close()
+      consumer.close()
+    })
 
-    // Reset state
-    this.isConnected = false
-    this.localStream = null
-    this.consumerTransports = []
-    this.consumingTransports = []
+    if (this.producerTransport) {
+      this.producerTransport.close()
+    }
   }
 }
 

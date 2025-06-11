@@ -108,6 +108,8 @@ const StreamPage = () => {
                 className="w-full h-full object-cover"
                 ref={el => el && (el.srcObject = localStream)}
               />
+              
+              
             ) : (
               <div className="flex items-center justify-center h-full">
                 <div className="text-gray-500">Camera starting...</div>
@@ -147,5 +149,6 @@ const StreamPage = () => {
     </div>
   )
 }
+
 
 export default StreamPage

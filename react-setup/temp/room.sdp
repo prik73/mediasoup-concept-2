@@ -1,0 +1,12 @@
+v=0
+o=- 0 0 IN IP4 127.0.0.1
+s=FFmpeg
+c=IN IP4 127.0.0.1
+t=0 0
+m=video 3596 RTP/AVP 101
+a=rtpmap:101 VP8/90000
+a=sendonly
+m=audio 3877 RTP/AVP 100
+a=rtpmap:100 OPUS/48000/2
+a=fmtp:100 minptime=10;useinbandfec=1
+a=sendonly

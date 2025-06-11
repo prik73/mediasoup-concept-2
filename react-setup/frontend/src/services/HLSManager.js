@@ -52,7 +52,8 @@ class HLSManager extends EventEmitter {
       }
     })
   }
-setupHLSListeners() {
+
+  setupHLSListeners() {
     this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
       console.log('HLS manifest parsed')
       this.emit('streamReady')
@@ -77,7 +78,7 @@ setupHLSListeners() {
         }
       }
     })
-
+    
     this.hls.on(Hls.Events.FRAG_LOADED, () => {
       // Fragment loaded successfully
       this.emit('fragmentLoaded')

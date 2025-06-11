@@ -1,48 +1,60 @@
 export class SocketHandler {
-  constructor(mediasoupService) {
-    this.mediasoupService = mediasoupService
+  constructor(mediasoupService, mediasoupFFmpeg) {
+    this.mediasoupService = mediasoupService;
+    this.mediasoupFFmpeg = mediasoupFFmpeg;
   }
 
   handleConnection(socket) {
-    console.log(`🔌 New connection: ${socket.id}`)
+    console.log(`🔌 New connection: ${socket.id}`);
     
-    socket.emit('connection-success', { socketId: socket.id })
+    socket.emit('connection-success', { socketId: socket.id });
 
     // Set up all socket event handlers
-    this.setupEventHandlers(socket)
+    this.setupEventHandlers(socket);
   }
 
   setupEventHandlers(socket) {
-    socket.on('disconnect', () => this.handleDisconnect(socket))
-    socket.on('joinRoom', (data, callback) => this.handleJoinRoom(socket, data, callback))
-    socket.on('createWebRtcTransport', (data, callback) => this.handleCreateTransport(socket, data, callback))
-    socket.on('transport-connect', (data) => this.handleTransportConnect(socket, data))
-    socket.on('transport-produce', (data, callback) => this.handleTransportProduce(socket, data, callback))
-    socket.on('getProducers', (callback) => this.handleGetProducers(socket, callback))
-    socket.on('transport-recv-connect', (data) => this.handleTransportRecvConnect(socket, data))
-    socket.on('consume', (data, callback) => this.handleConsume(socket, data, callback))
-    socket.on('consumer-resume', (data) => this.handleConsumerResume(socket, data))
+    socket.on('disconnect', () => this.handleDisconnect(socket));
+    socket.on('joinRoom', (data, callback) => this.handleJoinRoom(socket, data, callback));
+    socket.on('createWebRtcTransport', (data, callback) => this.handleCreateTransport(socket, data, callback));
+    socket.on('transport-connect', (data) => this.handleTransportConnect(socket, data));
+    socket.on('transport-produce', (data, callback) => this.handleTransportProduce(socket, data, callback));
+    socket.on('getProducers', (callback) => this.handleGetProducers(socket, callback));
+    socket.on('transport-recv-connect', (data) => this.handleTransportRecvConnect(socket, data));
+    socket.on('consume', (data, callback) => this.handleConsume(socket, data, callback));
+    socket.on('consumer-resume', (data) => this.handleConsumerResume(socket, data));
   }
 
   handleDisconnect(socket) {
-    console.log(`🔌 Peer disconnected: ${socket.id}`)
-    this.mediasoupService.cleanupPeer(socket.id)
+    console.log(`🔌 Peer disconnected: ${socket.id}`);
+    const peer = this.mediasoupService.peers[socket.id];
+    if (peer) {
+        const { roomName } = peer;
+        this.mediasoupService.cleanupPeer(socket.id);
+
+        const room = this.mediasoupService.rooms[roomName];
+        // If room is empty after cleanup, stop the stream
+        if (room && room.peers.length === 0) {
+            console.log(`🚪 Room ${roomName} is empty, stopping HLS stream.`);
+            this.mediasoupFFmpeg.stopRoomStream(roomName);
+        }
+    }
   }
 
   async handleJoinRoom(socket, { roomName }, callback) {
     try {
       // Check if peer already exists (prevent double joining)
       if (this.mediasoupService.peers[socket.id]) {
-        console.log(`⚠️ Peer ${socket.id} already in a room`)
-        const existingPeer = this.mediasoupService.peers[socket.id]
+        console.log(`⚠️ Peer ${socket.id} already in a room`);
+        const existingPeer = this.mediasoupService.peers[socket.id];
         if (existingPeer.roomName) {
-          const router = this.mediasoupService.rooms[existingPeer.roomName].router
-          callback({ rtpCapabilities: router.rtpCapabilities })
-          return
+          const router = this.mediasoupService.rooms[existingPeer.roomName].router;
+          callback({ rtpCapabilities: router.rtpCapabilities });
+          return;
         }
       }
 
-      const router = await this.mediasoupService.createRoom(roomName, socket.id)
+      const router = await this.mediasoupService.createRoom(roomName, socket.id);
       
       // Store peer info
       this.mediasoupService.peers[socket.id] = {
@@ -55,27 +67,27 @@ export class SocketHandler {
           name: '',
           isAdmin: false,
         }
-      }
+      };
 
-      const rtpCapabilities = router.rtpCapabilities
-      callback({ rtpCapabilities })
+      const rtpCapabilities = router.rtpCapabilities;
+      callback({ rtpCapabilities });
     } catch (error) {
-      console.error('Error joining room:', error)
-      callback({ error: error.message })
+      console.error('Error joining room:', error);
+      callback({ error: error.message });
     }
   }
 
   async handleCreateTransport(socket, { consumer }, callback) {
     try {
-      const peer = this.mediasoupService.peers[socket.id]
+      const peer = this.mediasoupService.peers[socket.id];
       if (!peer) {
-        throw new Error('Peer not found')
+        throw new Error('Peer not found');
       }
 
-      const { roomName } = peer
-      const router = this.mediasoupService.rooms[roomName].router
+      const { roomName } = peer;
+      const router = this.mediasoupService.rooms[roomName].router;
       
-      const transport = await this.mediasoupService.createWebRtcTransport(router)
+      const transport = await this.mediasoupService.createWebRtcTransport(router);
       
       callback({
         params: {
@@ -84,139 +96,178 @@ export class SocketHandler {
           iceCandidates: transport.iceCandidates,
           dtlsParameters: transport.dtlsParameters
         }
-      })
+      });
 
-      this.mediasoupService.addTransport(socket.id, transport, roomName, consumer)
+      this.mediasoupService.addTransport(socket.id, transport, roomName, consumer);
     } catch (error) {
-      console.error('Error creating transport:', error)
-      callback({ params: { error: error.message } })
+      console.error('Error creating transport:', error);
+      callback({ params: { error: error.message } });
     }
   }
+
   handleTransportConnect(socket, { dtlsParameters }) {
     try {
-      console.log('🔗 DTLS params received')
-      const transport = this.mediasoupService.getTransport(socket.id, false)
+      console.log('🔗 DTLS params received');
+      const transport = this.mediasoupService.getTransport(socket.id, false);
       
       if (!transport) {
-        console.error('Transport not found for socket:', socket.id)
-        return
+        console.error('Transport not found for socket:', socket.id);
+        return;
       }
 
       // Check if transport is already connected
       if (transport.connectionState === 'connected') {
-        console.log('🔗 Transport already connected, skipping...')
-        return
+        console.log('🔗 Transport already connected, skipping...');
+        return;
       }
 
       transport.connect({ dtlsParameters }).catch(error => {
         // Ignore if already connected
         if (!error.message.includes('already called')) {
-          console.error('Transport connect error:', error)
+          console.error('Transport connect error:', error);
         }
-      })
+      });
     } catch (error) {
-      console.error('Error in handleTransportConnect:', error)
+      console.error('Error in handleTransportConnect:', error);
     }
   }
 
   async handleTransportProduce(socket, { kind, rtpParameters, appData }, callback) {
     try {
-      const transport = this.mediasoupService.getTransport(socket.id, false)
+      const transport = this.mediasoupService.getTransport(socket.id, false);
       
       if (!transport) {
-        throw new Error('Producer transport not found')
+        throw new Error('Producer transport not found');
       }
 
-      const producer = await transport.produce({ kind, rtpParameters })
+      const producer = await transport.produce({ kind, rtpParameters });
 
-      const peer = this.mediasoupService.peers[socket.id]
+      const peer = this.mediasoupService.peers[socket.id];
       if (!peer) {
-        throw new Error('Peer not found')
+        throw new Error('Peer not found');
       }
 
-      const { roomName } = peer
-      this.mediasoupService.addProducer(socket.id, producer, roomName)
+      const { roomName } = peer;
+      this.mediasoupService.addProducer(socket.id, producer, roomName);
       
-      this.informConsumers(roomName, socket.id, producer.id)
+      this.informConsumers(roomName, socket.id, producer.id);
 
-      console.log(`🎥 Producer created: ${producer.id}, kind: ${producer.kind}`)
+      console.log(`🎥 Producer created: ${producer.id}, kind: ${producer.kind}`);
 
       producer.on('transportclose', () => {
-        console.log('🚛 Transport closed for producer')
-        producer.close()
-      })
+        console.log('🚛 Transport closed for producer');
+        producer.close();
+      });
+
+      // Auto-start HLS stream when we have both audio and video producers
+      this.checkAndStartHLSStream(roomName);
 
       callback({
         id: producer.id,
         producersExist: this.mediasoupService.producers.length > 1
-      })
+      });
     } catch (error) {
-      console.error('Error creating producer:', error)
-      callback({ error: error.message })
+      console.error('Error creating producer:', error);
+      callback({ error: error.message });
+    }
+  }
+
+  async checkAndStartHLSStream(roomName) {
+    try {
+      // Check if HLS stream is already running
+      if (this.mediasoupFFmpeg.isRoomStreaming(roomName)) {
+        console.log(`📺 HLS stream already running for room ${roomName}`);
+        return;
+      }
+
+      // Get producers in the room
+      const producers = this.mediasoupService.producers.filter(p => p.roomName === roomName);
+      
+      // Check if we have at least a video producer
+      const hasVideo = producers.some(p => p.producer.kind === 'video');
+      
+      if (hasVideo) {
+        console.log(`🎬 Starting HLS stream for room ${roomName} (${producers.length} producers)`);
+        
+        // Small delay to ensure all producers are properly set up
+        setTimeout(async () => {
+          const success = await this.mediasoupFFmpeg.startRoomStream(this.mediasoupService, roomName);
+          if (success) {
+            console.log(`✅ HLS stream started successfully for room ${roomName}`);
+          } else {
+            console.error(`❌ Failed to start HLS stream for room ${roomName}`);
+          }
+        }, 2000);
+      } else {
+        console.log(`⏳ Waiting for video producer in room ${roomName}`);
+      }
+    } catch (error) {
+      console.error(`Error checking HLS stream for room ${roomName}:`, error);
     }
   }
 
   handleGetProducers(socket, callback) {
     try {
-      const peer = this.mediasoupService.peers[socket.id]
+      const peer = this.mediasoupService.peers[socket.id];
       if (!peer) {
-        console.error('Peer not found for getProducers')
-        callback([])
-        return
+        console.error('Peer not found for getProducers');
+        callback([]);
+        return;
       }
 
-      const { roomName } = peer
-      const producerList = this.mediasoupService.getProducersInRoom(roomName, socket.id)
-      console.log(`📋 Available producers: ${producerList}`)
-      callback(producerList)
+      const { roomName } = peer;
+      const producerList = this.mediasoupService.getProducersInRoom(roomName, socket.id);
+      console.log(`📋 Available producers: ${producerList}`);
+      callback(producerList);
     } catch (error) {
-      console.error('Error getting producers:', error)
-      callback([])
+      console.error('Error getting producers:', error);
+      callback([]);
     }
   }
 
   async handleTransportRecvConnect(socket, { dtlsParameters, serverConsumerTransportId }) {
     try {
-      console.log(`🔗 Consumer transport connect`)
+      console.log(`🔗 Consumer transport connect`);
       
       const consumerTransport = this.mediasoupService.transports.find(
         t => t.consumer && t.transport.id === serverConsumerTransportId
-      )?.transport
+      )?.transport;
 
       if (!consumerTransport) {
-        console.error('Consumer transport not found:', serverConsumerTransportId)
-        return
+        console.error('Consumer transport not found:', serverConsumerTransportId);
+        return;
       }
 
       // Check if already connected
       if (consumerTransport.connectionState === 'connected') {
-        console.log('🔗 Consumer transport already connected, skipping...')
-        return
+        console.log('🔗 Consumer transport already connected, skipping...');
+        return;
       }
 
-      await consumerTransport.connect({ dtlsParameters })
+      await consumerTransport.connect({ dtlsParameters });
     } catch (error) {
       if (!error.message.includes('already called')) {
-        console.error('Consumer transport connect error:', error)
+        console.error('Consumer transport connect error:', error);
       }
     }
   }
+
   async handleConsume(socket, { rtpCapabilities, remoteProducerId, serverConsumerTransportId }, callback) {
     try {
-      const peer = this.mediasoupService.peers[socket.id]
+      const peer = this.mediasoupService.peers[socket.id];
       if (!peer) {
-        throw new Error('Peer not found')
+        throw new Error('Peer not found');
       }
 
-      const { roomName } = peer
-      const router = this.mediasoupService.rooms[roomName].router
+      const { roomName } = peer;
+      const router = this.mediasoupService.rooms[roomName].router;
 
       const consumerTransport = this.mediasoupService.transports.find(
         t => t.consumer && t.transport.id === serverConsumerTransportId
-      )?.transport
+      )?.transport;
 
       if (!consumerTransport) {
-        throw new Error('Consumer transport not found')
+        throw new Error('Consumer transport not found');
       }
 
       if (router.canConsume({ producerId: remoteProducerId, rtpCapabilities })) {
@@ -224,29 +275,29 @@ export class SocketHandler {
           producerId: remoteProducerId,
           rtpCapabilities,
           paused: true
-        })
+        });
 
         consumer.on('transportclose', () => {
-          console.log('🚛 Consumer transport closed')
-        })
+          console.log('🚛 Consumer transport closed');
+        });
 
         consumer.on('producerclose', () => {
-          console.log('🎥 Producer closed from consumer side')
-          socket.emit('producer-closed', { remoteProducerId })
+          console.log('🎥 Producer closed from consumer side');
+          socket.emit('producer-closed', { remoteProducerId });
           
           // Clean up
-          consumerTransport.close()
-          consumer.close()
+          consumerTransport.close();
+          consumer.close();
           
           this.mediasoupService.transports = this.mediasoupService.transports.filter(
             t => t.transport.id !== consumerTransport.id
-          )
+          );
           this.mediasoupService.consumers = this.mediasoupService.consumers.filter(
             c => c.consumer.id !== consumer.id
-          )
-        })
+          );
+        });
 
-        this.mediasoupService.addConsumer(socket.id, consumer, roomName)
+        this.mediasoupService.addConsumer(socket.id, consumer, roomName);
 
         callback({
           params: {
@@ -256,72 +307,73 @@ export class SocketHandler {
             rtpParameters: consumer.rtpParameters,
             serverConsumerId: consumer.id,
           }
-        })
+        });
       } else {
-        callback({ params: { error: 'Cannot consume' } })
+        callback({ params: { error: 'Cannot consume' } });
       }
     } catch (error) {
-      console.error('Error consuming:', error)
-      callback({ params: { error: error.message } })
+      console.error('Error consuming:', error);
+      callback({ params: { error: error.message } });
     }
   }
 
   async handleConsumerResume(socket, { serverConsumerId }) {
     try {
-      console.log('▶️ Consumer resume')
+      console.log('▶️ Consumer resume');
       const consumerData = this.mediasoupService.consumers.find(
         c => c.consumer.id === serverConsumerId
-      )
+      );
       if (consumerData) {
-        await consumerData.consumer.resume()
+        await consumerData.consumer.resume();
       }
     } catch (error) {
-      console.error('Error resuming consumer:', error)
+      console.error('Error resuming consumer:', error);
     }
   }
 
-    informConsumers(roomName, socketId, producerId) {
-    console.log(`📢 Informing all peers in room ${roomName} about new producer ${producerId}`)
+  informConsumers(roomName, socketId, producerId) {
+    console.log(`📢 Informing all peers in room ${roomName} about new producer ${producerId}`);
     
     // Get the room object to access its list of peers
-    const room = this.mediasoupService.rooms[roomName]
+    const room = this.mediasoupService.rooms[roomName];
     if (!room) {
-        console.error(`Room ${roomName} not found for informing consumers.`)
-        return
+        console.error(`Room ${roomName} not found for informing consumers.`);
+        return;
     }
 
     // Get all peers in the room except the one who just produced
-    const peersToInform = room.peers.filter(peerId => peerId !== socketId)
-    console.log(`Informing ${peersToInform.length} peers:`, peersToInform)
+    const peersToInform = room.peers.filter(peerId => peerId !== socketId);
+    console.log(`Informing ${peersToInform.length} peers:`, peersToInform);
 
     peersToInform.forEach(peerId => {
-        const peer = this.mediasoupService.peers[peerId]
+        const peer = this.mediasoupService.peers[peerId];
         if (peer && peer.socket && peer.socket.connected) {
-        console.log(`Sending new-producer to peer ${peerId}`)
-        peer.socket.emit('new-producer', { producerId })
+        console.log(`Sending new-producer to peer ${peerId}`);
+        peer.socket.emit('new-producer', { producerId });
         } else {
-        console.warn(`Peer ${peerId} not found or socket not connected`)
+        console.warn(`Peer ${peerId} not found or socket not connected`);
         }
-    })
-    }
-debugRoomState(roomName) {
-  const room = this.mediasoupService.rooms[roomName]
-  if (!room) {
-    console.log(`Room ${roomName} does not exist`)
-    return
+    });
   }
 
-  console.log(`=== Room ${roomName} Debug Info ===`)
-  console.log(`Peers in room:`, room.peers)
-  console.log(`Total producers:`, this.mediasoupService.producers.length)
-  console.log(`Producers in this room:`, 
-    this.mediasoupService.producers.filter(p => p.roomName === roomName).map(p => ({
-      socketId: p.socketId,
-      producerId: p.producer.id,
-      kind: p.producer.kind
-    }))
-  )
-  console.log(`Total consumers:`, this.mediasoupService.consumers.length)
-  console.log(`================================`)
-}
+  debugRoomState(roomName) {
+    const room = this.mediasoupService.rooms[roomName];
+    if (!room) {
+      console.log(`Room ${roomName} does not exist`);
+      return;
+    }
+
+    console.log(`=== Room ${roomName} Debug Info ===`);
+    console.log(`Peers in room:`, room.peers);
+    console.log(`Total producers:`, this.mediasoupService.producers.length);
+    console.log(`Producers in this room:`, 
+      this.mediasoupService.producers.filter(p => p.roomName === roomName).map(p => ({
+        socketId: p.socketId,
+        producerId: p.producer.id,
+        kind: p.producer.kind
+      }))
+    );
+    console.log(`Total consumers:`, this.mediasoupService.consumers.length);
+    console.log(`================================`);
+  }
 }

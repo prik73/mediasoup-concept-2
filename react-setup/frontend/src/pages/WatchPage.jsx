@@ -12,9 +12,14 @@ const WatchPage = () => {
   const [error, setError] = useState(null)
   const [viewerCount, setViewerCount] = useState(0)
   const [streamStatus, setStreamStatus] = useState('checking')
+  const [streamInfo, setStreamInfo] = useState({
+    participants: 0,
+    layout: 'Unknown',
+    quality: 'Loading...'
+  })
 
   useEffect(() => {
-    // Connect to HLS viewer socket with proper URL
+    // Connect to HLS viewer socket
     const socketUrl = window.location.protocol === 'https:' 
       ? 'https://localhost:3000'
       : 'http://localhost:3000'
@@ -27,9 +32,9 @@ const WatchPage = () => {
       setViewerCount(count)
     })
 
-    socketRef.current.emit('join-room', { roomName: roomId }) // FIXED: roomName -> roomId
+    socketRef.current.emit('join-room', { roomName: roomId })
 
-    // Check if stream is active
+    // Check stream and initialize
     checkStreamStatus()
 
     return () => {
@@ -37,7 +42,7 @@ const WatchPage = () => {
         hlsRef.current.destroy()
       }
       if (socketRef.current) {
-        socketRef.current.emit('leave-room', { roomName: roomId }) // FIXED: roomName -> roomId
+        socketRef.current.emit('leave-room', { roomName: roomId })
         socketRef.current.disconnect()
       }
     }
@@ -45,8 +50,7 @@ const WatchPage = () => {
 
   const checkStreamStatus = async () => {
     try {
-      // Since we know the stream is running, let's directly try to load HLS
-      console.log(`🔍 Checking stream for room: ${roomId}`)
+      console.log(`🔍 Checking multi-participant stream for room: ${roomId}`)
       setStreamStatus('live')
       initializeHLS()
     } catch (err) {
@@ -63,22 +67,44 @@ const WatchPage = () => {
       return
     }
 
-    console.log(`🎥 Initializing HLS for room: ${roomId}`)
+    console.log(`🎥 Initializing optimized HLS for multi-participant room: ${roomId}`)
 
     const hls = new Hls({
+      // Optimized settings for low-latency multi-participant stream
       enableWorker: true,
       lowLatencyMode: true,
-      backBufferLength: 90,
-      maxBufferLength: 30,
-      maxMaxBufferLength: 600,
-      maxBufferSize: 60 * 1000 * 1000,
-      maxBufferHole: 0.5,
-      highBufferWatchdogPeriod: 2,
-      nudgeOffset: 0.1,
-      nudgeMaxRetry: 3,
-      maxFragLookUpTolerance: 0.25,
-      liveSyncDurationCount: 3,
-      liveMaxLatencyDurationCount: 10
+      
+      // Buffer settings for smooth playback
+      backBufferLength: 30,           // Reduced from 90
+      maxBufferLength: 10,            // Reduced for lower latency
+      maxMaxBufferLength: 30,         // Reduced buffer
+      maxBufferSize: 20 * 1000 * 1000, // 20MB buffer
+      maxBufferHole: 0.3,             // Smaller buffer holes
+      
+      // Live streaming optimizations
+      liveSyncDurationCount: 2,       // Reduced for lower latency
+      liveMaxLatencyDurationCount: 4, // Reduced max latency
+      liveBackBufferLength: 10,       // Reduced back buffer
+      
+      // Playback settings
+      highBufferWatchdogPeriod: 1,    // Check buffer more frequently
+      nudgeOffset: 0.05,              // Smaller nudge offset
+      nudgeMaxRetry: 2,               // Fewer retries
+      maxFragLookUpTolerance: 0.1,    // Lower tolerance
+      
+      // Loading settings
+      manifestLoadingTimeOut: 5000,   // Faster timeout
+      manifestLoadingMaxRetry: 2,     // Fewer retries
+      levelLoadingTimeOut: 5000,      // Faster timeout
+      fragLoadingTimeOut: 10000,      // Reasonable frag timeout
+      
+      // Other optimizations
+      startFragPrefetch: true,        // Prefetch fragments
+      testBandwidth: false,           // Skip bandwidth test
+      progressive: true,              // Progressive loading
+      
+      // Debug (remove in production)
+      debug: false
     })
 
     hlsRef.current = hls
@@ -89,22 +115,46 @@ const WatchPage = () => {
 
     hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
       console.log('✅ Manifest parsed, levels:', data.levels.length)
+      
+      // Extract stream info
+      if (data.levels.length > 0) {
+        const level = data.levels[0]
+        setStreamInfo({
+          participants: 'Multi-participant',
+          layout: 'Composed view',
+          quality: `${level.width}x${level.height}@${Math.round(level.bitrate/1000)}kbps`
+        })
+      }
+      
       setIsLoading(false)
       setStreamStatus('live')
       
-      // Try to play
+      // Auto-play
       videoRef.current.play().catch(e => {
-        console.log('⚠️ Autoplay prevented:', e)
-        // Show a play button overlay
+        console.log('⚠️ Autoplay prevented, user interaction needed:', e)
       })
     })
 
     hls.on(Hls.Events.LEVEL_LOADED, (event, data) => {
-      console.log(`📊 Level loaded: ${data.details.totalduration}s`)
+      console.log(`📊 Level loaded: ${data.details.totalduration}s, segments: ${data.details.fragments.length}`)
     })
 
     hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
-      console.log(`📦 Fragment loaded: ${data.frag.sn}`)
+      console.log(`📦 Fragment loaded: ${data.frag.sn}, duration: ${data.frag.duration}s`)
+    })
+
+    hls.on(Hls.Events.BUFFER_APPENDED, (event, data) => {
+      // Monitor buffer health
+      const buffered = videoRef.current?.buffered
+      if (buffered && buffered.length > 0) {
+        const bufferEnd = buffered.end(buffered.length - 1)
+        const currentTime = videoRef.current?.currentTime || 0
+        const bufferLength = bufferEnd - currentTime
+        
+        if (bufferLength < 2) {
+          console.warn(`⚠️ Low buffer: ${bufferLength.toFixed(2)}s`)
+        }
+      }
     })
 
     hls.on(Hls.Events.ERROR, (event, data) => {
@@ -113,28 +163,34 @@ const WatchPage = () => {
       if (data.fatal) {
         switch (data.type) {
           case Hls.ErrorTypes.NETWORK_ERROR:
-            console.log('🔄 Network error, trying to recover...')
-            hls.startLoad()
+            console.log('🔄 Network error, attempting recovery...')
+            setTimeout(() => {
+              hls.startLoad()
+            }, 1000)
             break
+            
           case Hls.ErrorTypes.MEDIA_ERROR:
-            console.log('🔄 Media error, trying to recover...')
-            hls.recoverMediaError()
+            console.log('🔄 Media error, attempting recovery...')
+            setTimeout(() => {
+              hls.recoverMediaError()
+            }, 1000)
             break
+            
           default:
             console.error('💥 Fatal error, cannot recover')
-            setError(`Fatal stream error: ${data.type}`)
+            setError(`Fatal stream error: ${data.type} - ${data.details}`)
             setIsLoading(false)
             setStreamStatus('offline')
             break
         }
       } else {
-        console.warn(`⚠️ Non-fatal HLS error: ${data.type}`)
+        console.warn(`⚠️ Non-fatal HLS error: ${data.type} - ${data.details}`)
       }
     })
 
-    // FIXED: Use roomId instead of roomName
+    // Stream URL
     const streamUrl = `${window.location.protocol}//${window.location.hostname}:3000/hls/${roomId}/index.m3u8`
-    console.log(`🌐 Loading HLS stream from: ${streamUrl}`)
+    console.log(`🌐 Loading multi-participant HLS stream from: ${streamUrl}`)
     
     hls.loadSource(streamUrl)
     hls.attachMedia(videoRef.current)
@@ -160,15 +216,23 @@ const WatchPage = () => {
     if (videoRef.current) {
       videoRef.current.play().catch(e => {
         console.error('Play failed:', e)
+        setError('Could not play video. Please try clicking play again.')
       })
     }
+  }
+
+  const getLayoutDescription = () => {
+    return streamInfo.layout || 'Determining layout...'
   }
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 max-w-7xl mx-auto">
-        <h2 className="text-xl font-semibold">Watching: {roomId}</h2>
+        <div>
+          <h2 className="text-xl font-semibold">Multi-Participant Stream: {roomId}</h2>
+          <p className="text-sm text-gray-400">Live video conference view</p>
+        </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-gray-400">
             {viewerCount} viewer{viewerCount !== 1 ? 's' : ''}
@@ -178,7 +242,7 @@ const WatchPage = () => {
             streamStatus === 'checking' ? 'bg-yellow-600' : 'bg-gray-600'
           }`}>
             {streamStatus === 'live' ? '● LIVE' : 
-             streamStatus === 'checking' ? '● CHECKING' : '● OFFLINE'}
+             streamStatus === 'checking' ? '● LOADING' : '● OFFLINE'}
           </div>
         </div>
       </div>
@@ -189,9 +253,10 @@ const WatchPage = () => {
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-center">
-                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-400">Loading stream...</p>
+                <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-400 text-lg">Loading multi-participant stream...</p>
                 <p className="text-sm text-gray-500 mt-2">Room: {roomId}</p>
+                <p className="text-xs text-gray-600 mt-2">Composing video layout and mixing audio...</p>
               </div>
             </div>
           )}
@@ -199,12 +264,13 @@ const WatchPage = () => {
           {error && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-900 z-10">
               <div className="text-center">
+                <div className="text-6xl mb-4">📺</div>
                 <p className="text-red-400 mb-4">{error}</p>
                 <button
                   onClick={handleRetry}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
                 >
-                  Retry
+                  Retry Connection
                 </button>
               </div>
             </div>
@@ -219,14 +285,14 @@ const WatchPage = () => {
             onClick={handlePlay}
           />
 
-          {/* Manual play button overlay for autoplay restrictions */}
+          {/* Manual play button overlay */}
           {!isLoading && !error && streamStatus === 'live' && (
             <div 
-              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
+              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 cursor-pointer opacity-0 hover:opacity-100 transition-opacity"
               onClick={handlePlay}
             >
-              <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-                <div className="w-0 h-0 border-l-8 border-l-white border-t-4 border-t-transparent border-b-4 border-b-transparent ml-1"></div>
+              <div className="w-20 h-20 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                <div className="w-0 h-0 border-l-12 border-l-white border-t-8 border-t-transparent border-b-8 border-b-transparent ml-2"></div>
               </div>
             </div>
           )}
@@ -234,36 +300,54 @@ const WatchPage = () => {
 
         {/* Stream Info */}
         <div className="mt-4 p-4 bg-gray-800 rounded-lg">
-          <h3 className="font-semibold mb-2">Stream Information</h3>
+          <h3 className="font-semibold mb-3">🎥 Multi-Participant Stream Information</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>
               <span className="text-gray-400">Room:</span>
-              <span className="ml-2">{roomId}</span>
+              <span className="ml-2 font-mono">{roomId}</span>
+            </div>
+            <div>
+              <span className="text-gray-400">Layout:</span>
+              <span className="ml-2">{getLayoutDescription()}</span>
             </div>
             <div>
               <span className="text-gray-400">Quality:</span>
-              <span className="ml-2">1080p</span>
+              <span className="ml-2">{streamInfo.quality}</span>
             </div>
             <div>
               <span className="text-gray-400">Latency:</span>
-              <span className="ml-2">Low (~2-5s)</span>
-            </div>
-            <div>
-              <span className="text-gray-400">Status:</span>
-              <span className={`ml-2 ${streamStatus === 'live' ? 'text-green-400' : 'text-red-400'}`}>
-                {streamStatus.toUpperCase()}
-              </span>
+              <span className="ml-2 text-green-400">~1-3s</span>
             </div>
           </div>
         </div>
 
-        {/* Debug Info (remove in production) */}
+        {/* Stream Features */}
         <div className="mt-4 p-4 bg-gray-800 rounded-lg">
-          <h3 className="font-semibold mb-2">Debug Info</h3>
+          <h3 className="font-semibold mb-3">✨ Stream Features</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+              <span>Real-time video composition</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+              <span>Mixed audio from all participants</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+              <span>Adaptive layout based on participant count</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Technical Info */}
+        <div className="mt-4 p-4 bg-gray-800 rounded-lg">
+          <h3 className="font-semibold mb-2">🔧 Technical Details</h3>
           <div className="text-sm text-gray-400 space-y-1">
             <div>Stream URL: /hls/{roomId}/index.m3u8</div>
-            <div>HLS Supported: {Hls.isSupported() ? 'Yes' : 'No'}</div>
+            <div>HLS Supported: {Hls.isSupported() ? '✅ Yes' : '❌ No'}</div>
             <div>Viewers: {viewerCount}</div>
+            <div>Stream Type: Multi-participant live composition</div>
           </div>
         </div>
       </div>
